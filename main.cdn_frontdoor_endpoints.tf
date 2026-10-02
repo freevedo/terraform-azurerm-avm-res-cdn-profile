@@ -1,5 +1,5 @@
 resource "azurerm_cdn_frontdoor_endpoint" "endpoints" {
-  for_each = var.front_door_endpoints
+  for_each = local.front_door_endpoints
 
   cdn_frontdoor_profile_id = azapi_resource.front_door_profile.id
   name                     = each.value.name
@@ -8,15 +8,15 @@ resource "azurerm_cdn_frontdoor_endpoint" "endpoints" {
 }
 
 resource "azurerm_cdn_frontdoor_route" "routes" {
-  for_each = var.front_door_routes
+  for_each = local.front_door_routes
 
-  cdn_frontdoor_endpoint_id       = azurerm_cdn_frontdoor_endpoint.endpoints[each.value.endpoint_key].id
-  cdn_frontdoor_origin_group_id   = azurerm_cdn_frontdoor_origin_group.origin_groups[each.value.origin_group_key].id
+  cdn_frontdoor_endpoint_id       = azurerm_cdn_frontdoor_endpoint.endpoints[each.value.endpoint_name].id
+  cdn_frontdoor_origin_group_id   = azurerm_cdn_frontdoor_origin_group.origin_groups[each.value.origin_group_name].id
   name                            = each.value.name
   patterns_to_match               = each.value.patterns_to_match
   supported_protocols             = each.value.supported_protocols
   cdn_frontdoor_custom_domain_ids = local.route_custom_domains[each.key]
-  cdn_frontdoor_origin_ids        = [for x in azurerm_cdn_frontdoor_origin.origins : x.id if contains(each.value.origin_keys, x.name)]
+  cdn_frontdoor_origin_ids        = [for n in each.value.origin_names : azurerm_cdn_frontdoor_origin.origins["${each.value.origin_group_name}/${n}"].id]
   cdn_frontdoor_origin_path       = each.value.cdn_frontdoor_origin_path
   cdn_frontdoor_rule_set_ids      = [for k, v in azurerm_cdn_frontdoor_rule_set.rule_set : v.id if contains(coalesce(each.value.rule_set_names, [""]), v.name)]
   enabled                         = each.value.enabled

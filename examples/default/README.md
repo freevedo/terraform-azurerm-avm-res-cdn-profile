@@ -40,19 +40,19 @@ module "azurerm_cdn_frontdoor_profile" {
   name                = module.naming.cdn_profile.name_unique
   resource_group_name = azurerm_resource_group.this.name
   enable_telemetry    = var.enable_telemetry
-  front_door_endpoints = {
-    ep1_key = {
+  front_door_endpoints = [
+    {
       name = "ep1-${module.naming.cdn_endpoint.name_unique}"
       tags = {
         environment = "avm-demo"
       }
-    }
-    ep2_key = {
+    },
+    {
       name = "ep2-${module.naming.cdn_endpoint.name_unique}"
     }
-  }
-  front_door_origin_groups = {
-    og1_key = {
+  ]
+  front_door_origin_groups = [
+    {
       name = "og1"
       health_probe = {
         hp1 = {
@@ -70,11 +70,11 @@ module "azurerm_cdn_frontdoor_profile" {
         }
       }
     }
-  }
-  front_door_origins = {
-    origin1_key = {
+  ]
+  front_door_origins = [
+    {
       name                           = "origin1"
-      origin_group_key               = "og1_key"
+      origin_group_name              = "og1"
       enabled                        = true
       certificate_name_check_enabled = false
       host_name                      = "contoso.com"
@@ -83,10 +83,10 @@ module "azurerm_cdn_frontdoor_profile" {
       host_header                    = "www.contoso.com"
       priority                       = 1
       weight                         = 1
-    }
-    origin2_key = {
+    },
+    {
       name                           = "origin2"
-      origin_group_key               = "og1_key"
+      origin_group_name              = "og1"
       enabled                        = true
       certificate_name_check_enabled = false
       host_name                      = "contoso1.com"
@@ -95,10 +95,10 @@ module "azurerm_cdn_frontdoor_profile" {
       host_header                    = "www.contoso1.com"
       priority                       = 1
       weight                         = 1
-    }
-    origin3_key = {
+    },
+    {
       name                           = "origin3"
-      origin_group_key               = "og1_key"
+      origin_group_name              = "og1"
       enabled                        = true
       certificate_name_check_enabled = false
       host_name                      = "contoso2.com"
@@ -108,13 +108,13 @@ module "azurerm_cdn_frontdoor_profile" {
       priority                       = 3
       weight                         = 1
     }
-  }
-  front_door_routes = {
-    route1_key = {
+  ]
+  front_door_routes = [
+    {
       name                      = "route1"
-      endpoint_key              = "ep1_key"
-      origin_group_key          = "og1_key"
-      origin_keys               = ["origin1_key", "origin2_key"]
+      endpoint_name             = "ep1-${module.naming.cdn_endpoint.name_unique}"
+      origin_group_name         = "og1"
+      origin_names              = ["origin1", "origin2"]
       forwarding_protocol       = "HttpsOnly"
       https_redirect_enabled    = true
       patterns_to_match         = ["/*"]
@@ -129,12 +129,12 @@ module "azurerm_cdn_frontdoor_profile" {
           content_types_to_compress     = ["text/html", "text/javascript", "text/xml"]
         }
       }
-    }
-    route2_key = {
+    },
+    {
       name                      = "route2"
-      endpoint_key              = "ep2_key"
-      origin_group_key          = "og1_key"
-      origin_keys               = ["origin2_key"]
+      endpoint_name             = "ep2-${module.naming.cdn_endpoint.name_unique}"
+      origin_group_name         = "og1"
+      origin_names              = ["origin2"]
       forwarding_protocol       = "HttpsOnly"
       https_redirect_enabled    = true
       patterns_to_match         = ["/*"]
@@ -142,15 +142,15 @@ module "azurerm_cdn_frontdoor_profile" {
       rule_set_names            = ["ruleset2"]
       cdn_frontdoor_origin_path = "/originpath"
     }
-  }
+  ]
   front_door_rule_sets = ["ruleset1", "ruleset2"]
-  front_door_rules = {
-    rule1_key = {
+  front_door_rules = [
+    {
       name              = "examplerule1"
       order             = 1
       behavior_on_match = "Continue"
       rule_set_name     = "ruleset1"
-      origin_group_key  = "og1_key"
+      origin_group_name = "og1"
       actions = {
 
         url_rewrite_actions = [{
@@ -249,13 +249,13 @@ module "azurerm_cdn_frontdoor_profile" {
           transforms       = ["Uppercase"]
         }]
       }
-    }
-    rule2_key = {
+    },
+    {
       name              = "examplerule2"
       order             = 1
       behavior_on_match = "Continue"
       rule_set_name     = "ruleset2"
-      origin_group_key  = "og1_key"
+      origin_group_name = "og1"
       actions = {
 
         url_redirect_actions = [{
@@ -344,7 +344,7 @@ module "azurerm_cdn_frontdoor_profile" {
         }]
       }
     }
-  }
+  ]
   sku = "Standard_AzureFrontDoor"
   tags = {
     environment = "avm-demo"

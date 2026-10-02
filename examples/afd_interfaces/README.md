@@ -131,16 +131,16 @@ module "azurerm_cdn_frontdoor_profile" {
     }
   }
   enable_telemetry = var.enable_telemetry
-  front_door_endpoints = {
-    ep1_key = {
+  front_door_endpoints = [
+    {
       name = "ep1-${module.naming.cdn_endpoint.name_unique}"
       tags = {
         env = "prod"
       }
     }
-  }
-  front_door_origin_groups = {
-    og1_key = {
+  ]
+  front_door_origin_groups = [
+    {
       name = "og1"
       health_probe = {
         hp1 = {
@@ -158,11 +158,11 @@ module "azurerm_cdn_frontdoor_profile" {
         }
       }
     }
-  }
-  front_door_origins = {
-    origin1_key = {
+  ]
+  front_door_origins = [
+    {
       name                           = "origin1"
-      origin_group_key               = "og1_key"
+      origin_group_name              = "og1"
       enabled                        = true
       certificate_name_check_enabled = false
       host_name                      = "contoso.com"
@@ -172,13 +172,13 @@ module "azurerm_cdn_frontdoor_profile" {
       priority                       = 1
       weight                         = 1
     }
-  }
-  front_door_routes = {
-    route1_key = {
+  ]
+  front_door_routes = [
+    {
       name                   = "route1"
-      endpoint_key           = "ep1_key"
-      origin_group_key       = "og1_key"
-      origin_keys            = ["origin1_key"]
+      endpoint_name          = "ep1-${module.naming.cdn_endpoint.name_unique}"
+      origin_group_name      = "og1"
+      origin_names           = ["origin1"]
       forwarding_protocol    = "HttpsOnly"
       https_redirect_enabled = true
       patterns_to_match      = ["/*"]
@@ -193,15 +193,15 @@ module "azurerm_cdn_frontdoor_profile" {
         }
       }
     }
-  }
+  ]
   front_door_rule_sets = ["ruleset1"]
-  front_door_rules = {
-    rule1_key = {
+  front_door_rules = [
+    {
       name              = "examplerule1"
       order             = 1
       behavior_on_match = "Continue"
       rule_set_name     = "ruleset1"
-      origin_group_key  = "og1_key"
+      origin_group_name = "og1"
       actions = {
 
         url_rewrite_actions = [{
@@ -301,7 +301,7 @@ module "azurerm_cdn_frontdoor_profile" {
         }]
       }
     }
-  }
+  ]
   managed_identities = {
     system_assigned = true
     user_assigned_resource_ids = [
