@@ -12,8 +12,27 @@ locals {
   front_door_custom_domains    = { for v in var.front_door_custom_domains : v.host_name => merge(v, { name = coalesce(v.name, replace(v.host_name, ".", "-")) }) }
   front_door_endpoints         = { for v in var.front_door_endpoints : v.name => v }
   front_door_firewall_policies = { for v in var.front_door_firewall_policies : v.name => v }
-  front_door_origin_groups     = { for v in var.front_door_origin_groups : v.name => v }
-  front_door_origins           = { for v in var.front_door_origins : "${v.origin_group_name}/${v.name}" => v }
+  front_door_origin_groups = {
+    for g in var.front_door_origin_groups : coalesce(g.name, replace(g.origins[0].host_name, ".", "-")) => merge(g, { name = coalesce(g.name, replace(g.origins[0].host_name, ".", "-")) })
+  }
+  front_door_origins = merge([
+    for gname, g in local.front_door_origin_groups : {
+      for o in g.origins : "${gname}/${coalesce(o.name, replace(o.host_name, ".", "-"))}" => merge(o, {
+        name              = coalesce(o.name, replace(o.host_name, ".", "-"))
+        origin_group_name = gname
+      })
+    }
+  ]...)
+  front_door_origin_keys_by_host_name = { for k, o in local.front_door_origins : o.host_name => k }
+  front_door_route_origin_group_names = {
+    for k, r in local.front_door_routes : k => r.origin_group_name != null ? r.origin_group_name : local.front_door_origins[local.front_door_origin_keys_by_host_name[r.origin_host_names[0]]].origin_group_name
+  }
+  front_door_route_origin_keys = {
+    for k, r in local.front_door_routes : k => distinct(concat(
+      [for n in r.origin_names : "${local.front_door_route_origin_group_names[k]}/${n}"],
+      [for h in r.origin_host_names : local.front_door_origin_keys_by_host_name[h]]
+    ))
+  }
   front_door_routes            = { for v in var.front_door_routes : v.name => v }
   front_door_rules             = { for v in var.front_door_rules : "${v.rule_set_name}/${v.name}" => v }
   front_door_secrets           = { for v in var.front_door_secrets : v.name => v }

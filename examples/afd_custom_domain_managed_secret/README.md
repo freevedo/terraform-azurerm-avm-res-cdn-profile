@@ -78,6 +78,30 @@ module "azurerm_cdn_frontdoor_profile" {
   front_door_origin_groups = [
     {
       name = "og1"
+      origins = [
+        {
+          name                           = "example-origin"
+          enabled                        = true
+          certificate_name_check_enabled = false
+          host_name                      = "contoso1.com"
+          http_port                      = 80
+          https_port                     = 443
+          host_header                    = "www.contoso1.com"
+          priority                       = 1
+          weight                         = 1
+        },
+        {
+          name                           = "origin2"
+          enabled                        = true
+          certificate_name_check_enabled = false
+          host_name                      = "contoso2.com"
+          http_port                      = 80
+          https_port                     = 443
+          host_header                    = "www.contoso2.com"
+          priority                       = 1
+          weight                         = 1
+        }
+      ]
       health_probe = {
         hp1 = {
           interval_in_seconds = 240
@@ -93,32 +117,6 @@ module "azurerm_cdn_frontdoor_profile" {
           successful_samples_required        = 3
         }
       }
-    }
-  ]
-  front_door_origins = [
-    {
-      name                           = "example-origin"
-      origin_group_name              = "og1"
-      enabled                        = true
-      certificate_name_check_enabled = false
-      host_name                      = "contoso1.com"
-      http_port                      = 80
-      https_port                     = 443
-      host_header                    = "www.contoso1.com"
-      priority                       = 1
-      weight                         = 1
-    },
-    {
-      name                           = "origin2"
-      origin_group_name              = "og1"
-      enabled                        = true
-      certificate_name_check_enabled = false
-      host_name                      = "contoso2.com"
-      http_port                      = 80
-      https_port                     = 443
-      host_header                    = "www.contoso2.com"
-      priority                       = 1
-      weight                         = 1
     }
   ]
   front_door_routes = [

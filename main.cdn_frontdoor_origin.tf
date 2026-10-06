@@ -13,7 +13,7 @@ resource "azurerm_cdn_frontdoor_origin" "origins" {
   weight                         = each.value.weight
 
   dynamic "private_link" {
-    for_each = each.value.private_link != null ? (each.value.private_link) : {}
+    for_each = each.value.private_link != null ? [each.value.private_link] : []
 
     content {
       location               = private_link.value.location

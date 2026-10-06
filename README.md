@@ -984,7 +984,22 @@ Default: `[]`
 
 Description:   Manages a list of Front Door (standard/premium) Origin groups.
 
-  - `name` - (Required) The name which should be used for this Front Door Origin Group.
+  - `name` - (Optional) The name which should be used for this Front Door Origin Group. Always used as given when set. When omitted, it defaults to the `host_name` of the first origin with dots replaced by hyphens (for example `app.contoso.com` becomes `app-contoso-com`). Set it explicitly on existing deployments, because changing the name of an Azure resource recreates it.
+  - `origins` - (Required) The list of origins of this origin group. Origins are nested in their group, so the group never has to be referenced from an origin.
+      - `host_name` - (Required) The IPv4 address, IPv6 address or Domain name of the Origin. Must be unique across all origin groups, so that routes can reference an origin by host name.
+      - `name` - (Optional) The name which should be used for this Front Door Origin. Always used as given when set. When omitted, it defaults to the `host_name` with dots replaced by hyphens.
+      - `certificate_name_check_enabled` - (Optional) Specifies whether certificate name checks are enabled for this origin. Defaults to true.
+      - `enabled` - (Optional) Should the origin be enabled? Defaults to true.
+      - `http_port` - (Optional) The value of the HTTP port. Must be between 1 and 65535. Defaults to 80.
+      - `https_port` - (Optional) The value of the HTTPS port. Must be between 1 and 65535. Defaults to 443.
+      - `host_header` - (Optional) The host header value (an IPv4 address, IPv6 address or Domain name) which is sent to the origin with each request. If unspecified the hostname from the request will be used.
+      - `priority` - (Optional) Priority of origin in given origin group for load balancing. Must be between 1 and 5 (inclusive). Defaults to 1.
+      - `weight` - (Optional) The weight of the origin in a given origin group for load balancing. Must be between 1 and 1000. Defaults to 500.
+      - `private_link` - (Optional) A private\_link object as defined below:-
+          - `request_message` - (Optional) The request message submitted to the private link target when requesting the connection. Between 10 and 140 characters.
+          - `target_type` - (Optional) The type of target for this Private Link Endpoint. Possible values are `blob`, `blob_secondary`, `web`, `sites`, `Gateway`, `managedEnvironments` and `web_secondary`. Set to null for a load balancer origin.
+          - `location` - (Required) The location where the Private Link resource should exist.
+          - `private_link_target_id` - (Required) The ID of the Private Link resource to connect to.
   - `load_balancing` - (Required) A load\_balancing block as defined below:-
       - `additional_latency_in_milliseconds` - (Optional) Specifies the additional latency in milliseconds for probes to fall into the lowest latency bucket. Possible values are between 0 and 1000 milliseconds (inclusive). Defaults to 50
       - `sample_size` - (Optional) Specifies the number of samples to consider for load balancing decisions. Possible values are between 0 and 255 (inclusive). Defaults to 4.
@@ -999,7 +1014,13 @@ Description:   Manages a list of Front Door (standard/premium) Origin groups.
   ```terraform
   front_door_origin_groups = [
     {
-      name = "og1"
+      name = "og1" # optional
+      origins = [
+        {
+          host_name   = "app.contoso.com" # name defaults to "app-contoso-com"
+          host_header = "app.contoso.com"
+        }
+      ]
       health_probe = {
         hp1 = {
           interval_in_seconds = 240
@@ -1023,7 +1044,24 @@ Type:
 
 ```hcl
 list(object({
-    name = string
+    name = optional(string)
+    origins = list(object({
+      host_name                      = string
+      name                           = optional(string)
+      certificate_name_check_enabled = optional(bool, true)
+      enabled                        = optional(bool, true)
+      http_port                      = optional(number, 80)
+      https_port                     = optional(number, 443)
+      host_header                    = optional(string, null)
+      priority                       = optional(number, 1)
+      weight                         = optional(number, 500)
+      private_link = optional(object({
+        request_message        = optional(string, "Access request for CDN FrontDoor Private Link Origin")
+        target_type            = optional(string, null)
+        location               = string
+        private_link_target_id = string
+      }), null)
+    }))
     health_probe = optional(map(object({
       interval_in_seconds = number
       path                = optional(string, "/")
@@ -1040,85 +1078,14 @@ list(object({
 
 Default: `[]`
 
-### <a name="input_front_door_origins"></a> [front\_door\_origins](#input\_front\_door\_origins)
-
-Description:   Manages a list of Front Door (standard/premium) Origins.
-
-  - `name` - (Required) The name which should be used for this Front Door Origin.
-  - `origin_group_name` - (Required) The name of the origin group (see `front_door_origin_groups`) to which this origin belongs.
-  - `host_name` - (Required) The IPv4 address, IPv6 address or Domain name of the Origin.
-  - `certificate_name_check_enabled` - (Required) Specifies whether certificate name checks are enabled for this origin.
-  - `enabled` - (Optional) Should the origin be enabled? Possible values are true or false. Defaults to true.
-  - `http_port` - (Optional) The value of the HTTP port. Must be between 1 and 65535. Defaults to 80
-  - `https_port` - (Optional) The value of the HTTPS port. Must be between 1 and 65535. Defaults to 443.
-  - `origin_host_header` - (Optional) The host header value (an IPv4 address, IPv6 address or Domain name) which is sent to the origin with each request. If unspecified the hostname from the request will be used.
-  - `priority` - (Optional) Priority of origin in given origin group for load balancing. Higher priorities will not be used for load balancing if any lower priority origin is healthy. Must be between 1 and 5 (inclusive). Defaults to 1.
-  - `weight` - (Optional) The weight of the origin in a given origin group for load balancing. Must be between 1 and 1000. Defaults to 500.
-  - `private_link` - (Optional) A private\_link block as defined below:-
-      - `request_message` - (Optional) Specifies the request message that will be submitted to the private\_link\_target\_id when requesting the private link endpoint connection. Values must be between 1 and 140 characters in length. Defaults to Access request for CDN FrontDoor Private Link Origin.
-      - `target_type` - (Optional) Specifies the type of target for this Private Link Endpoint. Possible values are `blob`, `blob_secondary`, `web`, `sites`, `Gateway`, `managedEnvironments` and `web_secondary`.
-      - `location` - (Required) Specifies the location where the Private Link resource should exist. Changing this forces a new resource to be created.
-      - `private_link_target_id` - (Required) Specifies the ID of the Private Link resource to connect to.
-
-  Example Input:
-
-  ```terraform
-  front_door_origins = [
-    {
-        name                           = "origin1"
-        origin_group_name               = "og1"
-        enabled                        = true
-        certificate_name_check_enabled = true
-        host_name                      = replace(replace(azurerm_storage_account.storage.primary_blob_endpoint, "https://", ""), "/", "")
-        http_port                      = 80
-        https_port                     = 443
-        host_header                    = replace(replace(azurerm_storage_account.storage.primary_blob_endpoint, "https://", ""), "/", "")
-        priority                       = 1
-        weight                         = 1
-        private_link = {
-          pl = {
-            request_message        = "Please approve this private link connection"
-            target_type            = "blob"
-            location               = azurerm_storage_account.storage.location
-            private_link_target_id = azurerm_storage_account.storage.id
-          }
-        }
-      }
-    ]
-```
-
-Type:
-
-```hcl
-list(object({
-    name                           = string
-    origin_group_name              = string
-    host_name                      = string
-    certificate_name_check_enabled = string
-    enabled                        = optional(bool, true)
-    http_port                      = optional(number, 80)
-    https_port                     = optional(number, 443)
-    host_header                    = optional(string, null)
-    priority                       = optional(number, 1)
-    weight                         = optional(number, 500)
-    private_link = optional(map(object({
-      request_message        = string
-      target_type            = optional(string, null)
-      location               = string
-      private_link_target_id = string
-    })), null)
-  }))
-```
-
-Default: `[]`
-
 ### <a name="input_front_door_routes"></a> [front\_door\_routes](#input\_front\_door\_routes)
 
 Description:   Manages a list of Front Door (standard/premium) Routes.
 
   - `name` - (Required) The name which should be used for this Front Door Route. Valid values must begin with a letter or number, end with a letter or number and may only contain letters, numbers and hyphens with a maximum length of 90 characters.
-  - `origin_group_name` - (Required) The name of the origin group to associate the route with.
-  - `origin_names` - (Required) The list of names of the origins (within the origin group) to associate the route with.
+  - `origin_group_name` - (Optional) The name of the origin group to associate the route with. When omitted, it is inferred from `origin_host_names`.
+  - `origin_names` - (Optional) The list of names of origins (within the origin group) to associate the route with.
+  - `origin_host_names` - (Optional) The list of host names of the origins to associate the route with. The module finds the origins and their origin group. All origins must belong to the same origin group. Can be combined with `origin_names`.
   - `endpoint_name` - (Required) The name of the endpoint to associate the route with.
   - `forwarding_protocol` - (Optional) The Protocol that will be use when forwarding traffic to backends. Possible values are 'HttpOnly', 'HttpsOnly' or 'MatchRequest'. Defaults to 'MatchRequest'.
   - `patterns_to_match` - (Required) The route patterns of the rule.
@@ -1165,8 +1132,9 @@ Type:
 ```hcl
 list(object({
     name                      = string
-    origin_group_name         = string
-    origin_names              = list(string)
+    origin_group_name         = optional(string)
+    origin_names              = optional(list(string), [])
+    origin_host_names         = optional(list(string), [])
     endpoint_name             = string
     forwarding_protocol       = optional(string, "HttpsOnly")
     supported_protocols       = list(string)
@@ -1203,7 +1171,7 @@ Description:   Manages a list of Front Door (standard/premium) Rules. The follow
 
   - `name` - (Required) The name which should be used for this Front Door Rule.
   - `order` - (Required) The order in which the rule should be applied. The order value should be sequential and begin at 1(e.g. 1, 2, 3…). A Front Door Rule with a lesser order value will be applied before a rule with a greater order value.
-  - `origin_group_name` - (Required) The name of the origin group to associate the rule with.
+  - `origin_group_name` - (Optional) The name of the origin group to associate the rule with. Only used when a `route_configuration_override_actions` entry sets `set_origin_groupid` to true. Use the explicit group name, or the derived name (first origin `host_name` with dots replaced by hyphens) when the group has no name.
   - `rule_set_name` - (Required) The name of the rule set to associate the rule with.
   - `behavior_on_match` - (Optional) The behavior when a rule is matched. Possible values are 'Continue' or 'Stop'. Defaults to 'Continue'.
   - `actions` - (Required) An actions block as defined below:-
@@ -1443,7 +1411,7 @@ Type:
 list(object({
     name              = string
     order             = number
-    origin_group_name = string
+    origin_group_name = optional(string)
     rule_set_name     = string
     behavior_on_match = optional(string, "Continue")
 

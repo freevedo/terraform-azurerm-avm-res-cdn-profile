@@ -100,6 +100,25 @@ module "azurerm_cdn_frontdoor_profile" {
   front_door_origin_groups = [
     {
       name = "og1"
+      origins = [
+        {
+          name                           = "origin1"
+          enabled                        = true
+          certificate_name_check_enabled = true
+          host_name                      = replace(replace(azurerm_storage_account.storage.primary_blob_endpoint, "https://", ""), "/", "")
+          http_port                      = 80
+          https_port                     = 443
+          host_header                    = replace(replace(azurerm_storage_account.storage.primary_blob_endpoint, "https://", ""), "/", "")
+          priority                       = 1
+          weight                         = 1
+          private_link = {
+            request_message        = "Please approve this private link connection"
+            target_type            = "blob"
+            location               = azurerm_storage_account.storage.location
+            private_link_target_id = azurerm_storage_account.storage.id
+          }
+        }
+      ]
       health_probe = {
         hp1 = {
           interval_in_seconds = 240
@@ -113,28 +132,6 @@ module "azurerm_cdn_frontdoor_profile" {
           additional_latency_in_milliseconds = 0
           sample_size                        = 16
           successful_samples_required        = 3
-        }
-      }
-    }
-  ]
-  front_door_origins = [
-    {
-      name                           = "origin1"
-      origin_group_name              = "og1"
-      enabled                        = true
-      certificate_name_check_enabled = true
-      host_name                      = replace(replace(azurerm_storage_account.storage.primary_blob_endpoint, "https://", ""), "/", "")
-      http_port                      = 80
-      https_port                     = 443
-      host_header                    = replace(replace(azurerm_storage_account.storage.primary_blob_endpoint, "https://", ""), "/", "")
-      priority                       = 1
-      weight                         = 1
-      private_link = {
-        pl = {
-          request_message        = "Please approve this private link connection"
-          target_type            = "blob"
-          location               = azurerm_storage_account.storage.location
-          private_link_target_id = azurerm_storage_account.storage.id
         }
       }
     }
