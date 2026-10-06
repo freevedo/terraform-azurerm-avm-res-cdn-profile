@@ -1138,7 +1138,7 @@ variable "front_door_origin_groups" {
   description = <<DESCRIPTION
   Manages a list of Front Door (standard/premium) Origin groups.
 
-  - `name` - (Optional) The name which should be used for this Front Door Origin Group. Always used as given when set. When omitted, it defaults to the `host_name` of the first origin with dots replaced by hyphens (for example `app.contoso.com` becomes `app-contoso-com`). Set it explicitly on existing deployments, because changing the name of an Azure resource recreates it.
+  - `name` - (Optional) The name which should be used for this Front Door Origin Group. Always used as given when set. When omitted, it defaults to the `host_name` of the first origin with dots replaced by hyphens and the suffix `-og` (for example `app.contoso.com` becomes `app-contoso-com-og`). Set it explicitly on existing deployments, because changing the name of an Azure resource recreates it.
   - `origins` - (Required) The list of origins of this origin group. Origins are nested in their group, so the group never has to be referenced from an origin.
       - `host_name` - (Required) The IPv4 address, IPv6 address or Domain name of the Origin. Must be unique across all origin groups, so that routes can reference an origin by host name.
       - `name` - (Optional) The name which should be used for this Front Door Origin. Always used as given when set. When omitted, it defaults to the `host_name` with dots replaced by hyphens.
@@ -1201,7 +1201,7 @@ variable "front_door_origin_groups" {
     error_message = "front_door_origin_groups: set a name, or at least one origin so that the name can default from its host_name."
   }
   validation {
-    condition     = length([for g in var.front_door_origin_groups : coalesce(g.name, try(replace(g.origins[0].host_name, ".", "-"), "unnamed"))]) == length(distinct([for g in var.front_door_origin_groups : coalesce(g.name, try(replace(g.origins[0].host_name, ".", "-"), "unnamed"))]))
+    condition     = length([for g in var.front_door_origin_groups : coalesce(g.name, try("${replace(g.origins[0].host_name, ".", "-")}-og", "unnamed"))]) == length(distinct([for g in var.front_door_origin_groups : coalesce(g.name, try("${replace(g.origins[0].host_name, ".", "-")}-og", "unnamed"))]))
     error_message = "front_door_origin_groups: origin group names (explicit or derived from the first origin host_name) must be unique."
   }
   validation {
@@ -1632,7 +1632,7 @@ variable "front_door_rules" {
 
   - `name` - (Required) The name which should be used for this Front Door Rule.
   - `order` - (Required) The order in which the rule should be applied. The order value should be sequential and begin at 1(e.g. 1, 2, 3…). A Front Door Rule with a lesser order value will be applied before a rule with a greater order value.
-  - `origin_group_name` - (Optional) The name of the origin group to associate the rule with. Only used when a `route_configuration_override_actions` entry sets `set_origin_groupid` to true. Use the explicit group name, or the derived name (first origin `host_name` with dots replaced by hyphens) when the group has no name.
+  - `origin_group_name` - (Optional) The name of the origin group to associate the rule with. Only used when a `route_configuration_override_actions` entry sets `set_origin_groupid` to true. Use the explicit group name, or the derived name (first origin `host_name` with dots replaced by hyphens, plus `-og`) when the group has no name.
   - `rule_set_name` - (Required) The name of the rule set to associate the rule with.
   - `behavior_on_match` - (Optional) The behavior when a rule is matched. Possible values are 'Continue' or 'Stop'. Defaults to 'Continue'.
   - `actions` - (Required) An actions block as defined below:-

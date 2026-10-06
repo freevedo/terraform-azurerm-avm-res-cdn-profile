@@ -13,7 +13,7 @@ locals {
   front_door_endpoints         = { for v in var.front_door_endpoints : v.name => v }
   front_door_firewall_policies = { for v in var.front_door_firewall_policies : v.name => v }
   front_door_origin_groups = {
-    for g in var.front_door_origin_groups : coalesce(g.name, replace(g.origins[0].host_name, ".", "-")) => merge(g, { name = coalesce(g.name, replace(g.origins[0].host_name, ".", "-")) })
+    for g in var.front_door_origin_groups : coalesce(g.name, "${replace(g.origins[0].host_name, ".", "-")}-og") => merge(g, { name = coalesce(g.name, "${replace(g.origins[0].host_name, ".", "-")}-og") })
   }
   front_door_origins = merge([
     for gname, g in local.front_door_origin_groups : {
