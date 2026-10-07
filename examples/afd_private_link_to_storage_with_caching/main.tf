@@ -89,17 +89,36 @@ module "azurerm_cdn_frontdoor_profile" {
   name                = module.naming.cdn_profile.name_unique
   resource_group_name = azurerm_resource_group.this.name
   enable_telemetry    = var.enable_telemetry
-  front_door_endpoints = {
-    ep1_key = {
+  front_door_endpoints = [
+    {
       name = "ep1-${module.naming.cdn_endpoint.name_unique}"
       tags = {
         environment = "avm-demo"
       }
     }
-  }
-  front_door_origin_groups = {
-    og1_key = {
+  ]
+  front_door_origin_groups = [
+    {
       name = "og1"
+      origins = [
+        {
+          name                           = "origin1"
+          enabled                        = true
+          certificate_name_check_enabled = true
+          host_name                      = replace(replace(azurerm_storage_account.storage.primary_blob_endpoint, "https://", ""), "/", "")
+          http_port                      = 80
+          https_port                     = 443
+          host_header                    = replace(replace(azurerm_storage_account.storage.primary_blob_endpoint, "https://", ""), "/", "")
+          priority                       = 1
+          weight                         = 1
+          private_link = {
+            request_message        = "Please approve this private link connection"
+            target_type            = "blob"
+            location               = azurerm_storage_account.storage.location
+            private_link_target_id = azurerm_storage_account.storage.id
+          }
+        }
+      ]
       health_probe = {
         hp1 = {
           interval_in_seconds = 240
@@ -116,35 +135,13 @@ module "azurerm_cdn_frontdoor_profile" {
         }
       }
     }
-  }
-  front_door_origins = {
-    origin1_key = {
-      name                           = "origin1"
-      origin_group_key               = "og1_key"
-      enabled                        = true
-      certificate_name_check_enabled = true
-      host_name                      = replace(replace(azurerm_storage_account.storage.primary_blob_endpoint, "https://", ""), "/", "")
-      http_port                      = 80
-      https_port                     = 443
-      host_header                    = replace(replace(azurerm_storage_account.storage.primary_blob_endpoint, "https://", ""), "/", "")
-      priority                       = 1
-      weight                         = 1
-      private_link = {
-        pl = {
-          request_message        = "Please approve this private link connection"
-          target_type            = "blob"
-          location               = azurerm_storage_account.storage.location
-          private_link_target_id = azurerm_storage_account.storage.id
-        }
-      }
-    }
-  }
-  front_door_routes = {
-    route1_key = {
+  ]
+  front_door_routes = [
+    {
       name                   = "route1"
-      endpoint_key           = "ep1_key"
-      origin_group_key       = "og1_key"
-      origin_keys            = ["origin1_key"]
+      endpoint_name          = "ep1-${module.naming.cdn_endpoint.name_unique}"
+      origin_group_name      = "og1"
+      origin_names           = ["origin1"]
       https_redirect_enabled = true
       patterns_to_match      = ["/*"]
       supported_protocols    = ["Http", "Https"]
@@ -158,15 +155,15 @@ module "azurerm_cdn_frontdoor_profile" {
         }
       }
     }
-  }
+  ]
   front_door_rule_sets = ["ruleset1"]
-  front_door_rules = {
-    rule1_key = {
+  front_door_rules = [
+    {
       name              = "examplerule1"
       order             = 1
       behavior_on_match = "Continue"
       rule_set_name     = "ruleset1"
-      origin_group_key  = "og1_key"
+      origin_group_name = "og1"
       actions = {
 
         url_rewrite_actions = [{
@@ -266,6 +263,6 @@ module "azurerm_cdn_frontdoor_profile" {
         }]
       }
     }
-  }
+  ]
   sku = "Premium_AzureFrontDoor"
 }

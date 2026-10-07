@@ -1,5 +1,5 @@
 resource "azurerm_cdn_frontdoor_origin" "origins" {
-  for_each = var.front_door_origins
+  for_each = local.front_door_origins
 
   cdn_frontdoor_origin_group_id  = azurerm_cdn_frontdoor_origin_group.origin_groups[each.value.origin_group_key].id
   certificate_name_check_enabled = each.value.certificate_name_check_enabled
@@ -13,7 +13,7 @@ resource "azurerm_cdn_frontdoor_origin" "origins" {
   weight                         = each.value.weight
 
   dynamic "private_link" {
-    for_each = each.value.private_link != null ? (each.value.private_link) : {}
+    for_each = each.value.private_link != null ? [each.value.private_link] : []
 
     content {
       location               = private_link.value.location

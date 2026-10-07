@@ -722,42 +722,53 @@ DESCRIPTION
 }
 
 variable "front_door_custom_domains" {
-  type = map(object({
-    name        = string
-    dns_zone_id = optional(string, null)
+  type = list(object({
+    key         = optional(string)
     host_name   = string
+    name        = optional(string)
+    dns_zone_id = optional(string, null)
     tls = object({
-      certificate_type         = optional(string, "ManagedCertificate")
-      cdn_frontdoor_secret_key = optional(string, null)
+      certificate_type          = optional(string, "ManagedCertificate")
+      cdn_frontdoor_secret_name = optional(string, null)
     })
   }))
-  default     = {}
+  default     = []
   description = <<DESCRIPTION
-  Manages a map of Front Door (standard/premium) Custom Domains.
+  Manages a list of Front Door (standard/premium) Custom Domains. Custom domains are identified by their `host_name`, which must be unique.
 
-  - `name` - (Required) The name which should be used for this Front Door Custom Domain.
+  - `host_name` - (Required) The host name of the domain. The host_name field must be the FQDN of your domain. Routes and security policies reference the domain by this value.
+  - `key` - (Optional) Legacy escape hatch. Used as the Terraform `for_each` key (resource address) instead of the `host_name`. Set it to the key you used with the key-based version of this module to keep the existing state without any `moved` block or state edit. Leave it unset for new deployments. Must be unique.
+  - `name` - (Optional) The name which should be used for this Front Door Custom Domain. Defaults to the `host_name` with dots replaced by hyphens.
   - `dns_zone_id` - (Optional) The ID of the Azure DNS Zone which should be used for this Front Door Custom Domain.
-  - `host_name` - (Required) The host name of the domain. The host_name field must be the FQDN of your domain.
   - `tls` - (Required) A tls block as defined below : -
     - `certificate_type` - (Optional) Defines the source of the SSL certificate. Possible values include 'CustomerCertificate' and 'ManagedCertificate'. Defaults to 'ManagedCertificate'.
-    - `cdn_frontdoor_secret_key` - (Optional) Key of the Front Door Secret object. This is required when certificate_type is 'CustomerCertificate'.
+    - `cdn_frontdoor_secret_name` - (Optional) Name of the Front Door Secret (see `front_door_secrets`). This is required when certificate_type is 'CustomerCertificate'.
   Example Input:
 
   ```terraform
-  front_door_custom_domains = {
-    contoso1_key = {
-        name        = "contoso1"
-        dns_zone_id = azurerm_dns_zone.dnszone.id
-        host_name   = "contoso1.fabrikam.com"
-        tls = {
-          certificate_type    = "ManagedCertificate"
-          cdn_frontdoor_secret_key = "Secret1_key"
-        }
+  front_door_custom_domains = [
+    {
+      host_name   = "contoso1.fabrikam.com"
+      dns_zone_id = azurerm_dns_zone.dnszone.id
+      tls = {
+        certificate_type          = "CustomerCertificate"
+        cdn_frontdoor_secret_name = "Front-door-certificate"
       }
     }
+  ]
   ```
   DESCRIPTION
   nullable    = false
+
+  validation {
+    condition     = length([for v in var.front_door_custom_domains : v.key if v.key != null]) == length(distinct([for v in var.front_door_custom_domains : v.key if v.key != null]))
+    error_message = "front_door_custom_domains: key values must be unique."
+  }
+
+  validation {
+    condition     = length([for v in var.front_door_custom_domains : v.host_name]) == length(distinct([for v in var.front_door_custom_domains : v.host_name]))
+    error_message = "front_door_custom_domains: host_name values must be unique."
+  }
 
   validation {
     condition     = alltrue([for _, v in var.front_door_custom_domains : contains(["CustomerCertificate", "ManagedCertificate"], v.tls.certificate_type)])
@@ -766,37 +777,51 @@ variable "front_door_custom_domains" {
 }
 
 variable "front_door_endpoints" {
-  type = map(object({
+  type = list(object({
+    key     = optional(string)
     name    = string
     enabled = optional(bool, true)
     tags    = optional(map(any))
   }))
-  default     = {}
+  default     = []
   description = <<DESCRIPTION
-  Manages a map of Front Door (standard/premium) Endpoints.
+  Manages a list of Front Door (standard/premium) Endpoints.
 
+  - `key` - (Optional) Legacy escape hatch. Used as the Terraform `for_each` key (resource address) instead of the `name`. Set it to the key you used with the key-based version of this module to keep the existing state without any `moved` block or state edit. Leave it unset for new deployments. Must be unique.
   - `name` - (Required) The name which should be used for this Front Door Endpoint.
   - `enabled` - (Optional) Specifies if this Front Door Endpoint is enabled? Defaults to true.
   - `tags` - (Optional) Specifies a mapping of tags which should be assigned to the Front Door Endpoint.
   Example Input:
 
   ```terraform
-  front_door_endpoints = {
-    ep1_key = {
+  front_door_endpoints = [
+    {
         name = "ep1-ex"
         enabled = true
         tags = {
           environment = "avm-demo"
         }
       }
-    }
+    ]
   ```
   DESCRIPTION
   nullable    = false
+
+  validation {
+    condition     = length([for v in var.front_door_endpoints : v.key if v.key != null]) == length(distinct([for v in var.front_door_endpoints : v.key if v.key != null]))
+    error_message = "front_door_endpoints: key values must be unique."
+  }
+
+  validation {
+    condition     = length([for v in var.front_door_endpoints : v.name]) == length(distinct([for v in var.front_door_endpoints : v.name]))
+    error_message = "front_door_endpoints: endpoint names must be unique."
+  }
+
 }
 
 variable "front_door_firewall_policies" {
-  type = map(object({
+  type = list(object({
+    key                               = optional(string)
     name                              = string
     resource_group_name               = string
     sku_name                          = string
@@ -853,10 +878,11 @@ variable "front_door_firewall_policies" {
     })), {})
     tags = optional(map(any))
   }))
-  default     = {}
+  default     = []
   description = <<DESCRIPTION
-  Manages a map of Front Door (standard/premium) Firewall Policies.
+  Manages a list of Front Door (standard/premium) Firewall Policies.
 
+  - `key` - (Optional) Legacy escape hatch. Used as the Terraform `for_each` key (resource address) instead of the `name`. Set it to the key you used with the key-based version of this module to keep the existing state without any `moved` block or state edit. Leave it unset for new deployments. Must be unique.
   - `name` - (Required) The name which should be used for this Front Door Security Policy. Possible values must not be an empty string.
   - `resource_group_name` - (Required) The name of the resource group. Changing this forces a new resource to be created.
   - `sku_name` - (Required) The sku's pricing tier for this Front Door Firewall Policy. Possible values include 'Standard_AzureFrontDoor' or 'Premium_AzureFrontDoor'.
@@ -908,8 +934,8 @@ variable "front_door_firewall_policies" {
   Example Input:
 
   ```terraform
-  front_door_firewall_policies = {
-      fd_waf1_key = {
+  front_door_firewall_policies = [
+    {
       name                              = "examplecdnfdwafpolicy1"
       resource_group_name               = azurerm_resource_group.this.name
       sku_name                          = "Premium_AzureFrontDoor" # Ensure SKU_name for WAF is similar to SKU_name for front door profile.
@@ -1021,10 +1047,20 @@ variable "front_door_firewall_policies" {
         }
       }
     }
-  }
+  ]
   ```
   DESCRIPTION
   nullable    = false
+
+  validation {
+    condition     = length([for v in var.front_door_firewall_policies : v.key if v.key != null]) == length(distinct([for v in var.front_door_firewall_policies : v.key if v.key != null]))
+    error_message = "front_door_firewall_policies: key values must be unique."
+  }
+
+  validation {
+    condition     = length([for v in var.front_door_firewall_policies : v.name]) == length(distinct([for v in var.front_door_firewall_policies : v.name]))
+    error_message = "front_door_firewall_policies: firewall policy names must be unique."
+  }
 
   validation {
     condition     = alltrue([for _, v in var.front_door_firewall_policies : contains(["Standard_AzureFrontDoor", "Premium_AzureFrontDoor"], v.sku_name)])
@@ -1085,8 +1121,27 @@ variable "front_door_firewall_policies" {
 }
 
 variable "front_door_origin_groups" {
-  type = map(object({
-    name = string
+  type = list(object({
+    key  = optional(string)
+    name = optional(string)
+    origins = list(object({
+      key                            = optional(string)
+      host_name                      = string
+      name                           = optional(string)
+      certificate_name_check_enabled = optional(bool, true)
+      enabled                        = optional(bool, true)
+      http_port                      = optional(number, 80)
+      https_port                     = optional(number, 443)
+      host_header                    = optional(string, null)
+      priority                       = optional(number, 1)
+      weight                         = optional(number, 500)
+      private_link = optional(object({
+        request_message        = optional(string, "Access request for CDN FrontDoor Private Link Origin")
+        target_type            = optional(string, null)
+        location               = string
+        private_link_target_id = string
+      }), null)
+    }))
     health_probe = optional(map(object({
       interval_in_seconds = number
       path                = optional(string, "/")
@@ -1102,11 +1157,28 @@ variable "front_door_origin_groups" {
   # The below 2 properties will be enabled in near future
   # restore_traffic_time_to_healed_or_new_endpoint_in_minutes = optional(number, 10)
   # session_affinity_enabled = optional(bool, true)
-  default     = {}
+  default     = []
   description = <<DESCRIPTION
-  Manages a map of Front Door (standard/premium) Origin groups.
+  Manages a list of Front Door (standard/premium) Origin groups.
 
-  - `name` - (Required) The name which should be used for this Front Door Origin Group.
+  - `key` - (Optional) Legacy escape hatch. Used as the Terraform `for_each` key (resource address) instead of the group name. Set it to the key you used with the key-based version of this module to keep the existing state without any `moved` block or state edit. Leave it unset for new deployments. Must be unique.
+  - `name` - (Optional) The name which should be used for this Front Door Origin Group. Always used as given when set. When omitted, it defaults to the `host_name` of the first origin with dots replaced by hyphens and the suffix `-og` (for example `app.contoso.com` becomes `app-contoso-com-og`). Set it explicitly on existing deployments, because changing the name of an Azure resource recreates it.
+  - `origins` - (Required) The list of origins of this origin group. Origins are nested in their group, so the group never has to be referenced from an origin.
+      - `host_name` - (Required) The IPv4 address, IPv6 address or Domain name of the Origin. Must be unique across all origin groups, so that routes can reference an origin by host name.
+      - `key` - (Optional) Legacy escape hatch. Used as the Terraform `for_each` key instead of `<group name>/<origin name>`. Set it to the key you used with the key-based version of this module to keep the existing state. Leave it unset for new deployments. Must be unique.
+      - `name` - (Optional) The name which should be used for this Front Door Origin. Always used as given when set. When omitted, it defaults to the `host_name` with dots replaced by hyphens.
+      - `certificate_name_check_enabled` - (Optional) Specifies whether certificate name checks are enabled for this origin. Defaults to true.
+      - `enabled` - (Optional) Should the origin be enabled? Defaults to true.
+      - `http_port` - (Optional) The value of the HTTP port. Must be between 1 and 65535. Defaults to 80.
+      - `https_port` - (Optional) The value of the HTTPS port. Must be between 1 and 65535. Defaults to 443.
+      - `host_header` - (Optional) The host header value (an IPv4 address, IPv6 address or Domain name) which is sent to the origin with each request. If unspecified the hostname from the request will be used.
+      - `priority` - (Optional) Priority of origin in given origin group for load balancing. Must be between 1 and 5 (inclusive). Defaults to 1.
+      - `weight` - (Optional) The weight of the origin in a given origin group for load balancing. Must be between 1 and 1000. Defaults to 500.
+      - `private_link` - (Optional) A private_link object as defined below:-
+          - `request_message` - (Optional) The request message submitted to the private link target when requesting the connection. Between 10 and 140 characters.
+          - `target_type` - (Optional) The type of target for this Private Link Endpoint. Possible values are `blob`, `blob_secondary`, `web`, `sites`, `Gateway`, `managedEnvironments` and `web_secondary`. Set to null for a load balancer origin.
+          - `location` - (Required) The location where the Private Link resource should exist.
+          - `private_link_target_id` - (Required) The ID of the Private Link resource to connect to.
   - `load_balancing` - (Required) A load_balancing block as defined below:-
       - `additional_latency_in_milliseconds` - (Optional) Specifies the additional latency in milliseconds for probes to fall into the lowest latency bucket. Possible values are between 0 and 1000 milliseconds (inclusive). Defaults to 50
       - `sample_size` - (Optional) Specifies the number of samples to consider for load balancing decisions. Possible values are between 0 and 255 (inclusive). Defaults to 4.
@@ -1119,9 +1191,15 @@ variable "front_door_origin_groups" {
   Example Input:
 
   ```terraform
-  front_door_origin_groups = {
-    og1_key = {
-      name = "og1"
+  front_door_origin_groups = [
+    {
+      name = "og1" # optional
+      origins = [
+        {
+          host_name   = "app.contoso.com" # name defaults to "app-contoso-com"
+          host_header = "app.contoso.com"
+        }
+      ]
       health_probe = {
         hp1 = {
           interval_in_seconds = 240
@@ -1138,10 +1216,60 @@ variable "front_door_origin_groups" {
         }
       }
     }
-  }
+  ]
   ```
   DESCRIPTION
   nullable    = false
+
+  validation {
+    condition     = length([for g in var.front_door_origin_groups : g.key if g.key != null]) == length(distinct([for g in var.front_door_origin_groups : g.key if g.key != null]))
+    error_message = "front_door_origin_groups: key values must be unique."
+  }
+  validation {
+    condition     = length([for o in flatten([for g in var.front_door_origin_groups : g.origins]) : o.key if o.key != null]) == length(distinct([for o in flatten([for g in var.front_door_origin_groups : g.origins]) : o.key if o.key != null]))
+    error_message = "front_door_origin_groups: origin key values must be unique."
+  }
+  validation {
+    condition     = length([for v in var.front_door_origin_groups : v.key if v.key != null]) == length(distinct([for v in var.front_door_origin_groups : v.key if v.key != null]))
+    error_message = "front_door_origin_groups: key values must be unique."
+  }
+
+  validation {
+    condition     = alltrue([for g in var.front_door_origin_groups : g.name != null || length(g.origins) > 0])
+    error_message = "front_door_origin_groups: set a name, or at least one origin so that the name can default from its host_name."
+  }
+  validation {
+    condition     = length([for g in var.front_door_origin_groups : coalesce(g.name, try("${replace(g.origins[0].host_name, ".", "-")}-og", "unnamed"))]) == length(distinct([for g in var.front_door_origin_groups : coalesce(g.name, try("${replace(g.origins[0].host_name, ".", "-")}-og", "unnamed"))]))
+    error_message = "front_door_origin_groups: origin group names (explicit or derived from the first origin host_name) must be unique."
+  }
+  validation {
+    condition     = length([for o in flatten([for g in var.front_door_origin_groups : g.origins]) : o.host_name]) == length(distinct([for o in flatten([for g in var.front_door_origin_groups : g.origins]) : o.host_name]))
+    error_message = "front_door_origin_groups: origin host_name values must be unique across all origin groups."
+  }
+  validation {
+    condition     = alltrue([for g in var.front_door_origin_groups : length([for o in g.origins : coalesce(o.name, replace(o.host_name, ".", "-"))]) == length(distinct([for o in g.origins : coalesce(o.name, replace(o.host_name, ".", "-"))]))])
+    error_message = "front_door_origin_groups: origin names (explicit or derived from host_name) must be unique within an origin group."
+  }
+  validation {
+    condition     = alltrue([for o in flatten([for g in var.front_door_origin_groups : g.origins]) : o.http_port >= 1 && o.http_port <= 65535 && o.https_port >= 1 && o.https_port <= 65535])
+    error_message = "Origin http_port and https_port must be between 1 & 65535."
+  }
+  validation {
+    condition     = alltrue([for o in flatten([for g in var.front_door_origin_groups : g.origins]) : o.priority >= 1 && o.priority <= 5])
+    error_message = "Origin priority must be between 1 & 5."
+  }
+  validation {
+    condition     = alltrue([for o in flatten([for g in var.front_door_origin_groups : g.origins]) : o.weight >= 1 && o.weight <= 1000])
+    error_message = "Origin weight must be between 1 & 1000."
+  }
+  validation {
+    condition     = alltrue([for o in flatten([for g in var.front_door_origin_groups : g.origins]) : o.private_link == null ? true : length(o.private_link.request_message) >= 10 && length(o.private_link.request_message) <= 140])
+    error_message = "Origin private_link request_message must be between 10 and 140 characters in length."
+  }
+  validation {
+    condition     = alltrue([for o in flatten([for g in var.front_door_origin_groups : g.origins]) : o.private_link == null ? true : o.private_link.target_type == null ? true : contains(["blob", "blob_secondary", "web", "sites", "Gateway", "managedEnvironments", "web_secondary"], o.private_link.target_type)])
+    error_message = "Origin private_link target_type must be one of 'blob', 'blob_secondary', 'web', 'sites', 'Gateway', 'managedEnvironments' and 'web_secondary'. Set it to null for a load balancer as origin."
+  }
 
   # validation {
   #   condition = alltrue(
@@ -1232,144 +1360,20 @@ variable "front_door_origin_groups" {
   }
 }
 
-variable "front_door_origins" {
-  type = map(object({
-    name                           = string
-    origin_group_key               = string
-    host_name                      = string
-    certificate_name_check_enabled = string
-    enabled                        = optional(bool, true)
-    http_port                      = optional(number, 80)
-    https_port                     = optional(number, 443)
-    host_header                    = optional(string, null)
-    priority                       = optional(number, 1)
-    weight                         = optional(number, 500)
-    private_link = optional(map(object({
-      request_message        = string
-      target_type            = optional(string, null)
-      location               = string
-      private_link_target_id = string
-    })), null)
-  }))
-  default     = {}
-  description = <<DESCRIPTION
-  Manages a map of Front Door (standard/premium) Origins.
-
-  - `name` - (Required) The name which should be used for this Front Door Origin.
-  - `origin_group_key` - (Required) The key of the origin group to which this origin belongs.
-  - `host_name` - (Required) The IPv4 address, IPv6 address or Domain name of the Origin.
-  - `certificate_name_check_enabled` - (Required) Specifies whether certificate name checks are enabled for this origin.
-  - `enabled` - (Optional) Should the origin be enabled? Possible values are true or false. Defaults to true.
-  - `http_port` - (Optional) The value of the HTTP port. Must be between 1 and 65535. Defaults to 80
-  - `https_port` - (Optional) The value of the HTTPS port. Must be between 1 and 65535. Defaults to 443.
-  - `origin_host_header` - (Optional) The host header value (an IPv4 address, IPv6 address or Domain name) which is sent to the origin with each request. If unspecified the hostname from the request will be used.
-  - `priority` - (Optional) Priority of origin in given origin group for load balancing. Higher priorities will not be used for load balancing if any lower priority origin is healthy. Must be between 1 and 5 (inclusive). Defaults to 1.
-  - `weight` - (Optional) The weight of the origin in a given origin group for load balancing. Must be between 1 and 1000. Defaults to 500.
-  - `private_link` - (Optional) A private_link block as defined below:-
-      - `request_message` - (Optional) Specifies the request message that will be submitted to the private_link_target_id when requesting the private link endpoint connection. Values must be between 1 and 140 characters in length. Defaults to Access request for CDN FrontDoor Private Link Origin.
-      - `target_type` - (Optional) Specifies the type of target for this Private Link Endpoint. Possible values are `blob`, `blob_secondary`, `web`, `sites`, `Gateway`, `managedEnvironments` and `web_secondary`.
-      - `location` - (Required) Specifies the location where the Private Link resource should exist. Changing this forces a new resource to be created.
-      - `private_link_target_id` - (Required) Specifies the ID of the Private Link resource to connect to.
-
-  Example Input:
-
-  ```terraform
-  front_door_origins = {
-      origin1_key = {
-        name                           = "origin1"
-        origin_group_key               = "og1_key"
-        enabled                        = true
-        certificate_name_check_enabled = true
-        host_name                      = replace(replace(azurerm_storage_account.storage.primary_blob_endpoint, "https://", ""), "/", "")
-        http_port                      = 80
-        https_port                     = 443
-        host_header                    = replace(replace(azurerm_storage_account.storage.primary_blob_endpoint, "https://", ""), "/", "")
-        priority                       = 1
-        weight                         = 1
-        private_link = {
-          pl = {
-            request_message        = "Please approve this private link connection"
-            target_type            = "blob"
-            location               = azurerm_storage_account.storage.location
-            private_link_target_id = azurerm_storage_account.storage.id
-          }
-        }
-      }
-    }
-  ```
-  DESCRIPTION
-  nullable    = false
-
-  validation {
-    condition = alltrue(
-      [
-        for _, v in var.front_door_origins : v.http_port >= 1 && v.http_port <= 65535
-      ]
-    )
-    error_message = "Possible values must be between 1 & 65535"
-  }
-  validation {
-    condition = alltrue(
-      [
-        for _, v in var.front_door_origins : v.https_port >= 1 && v.https_port <= 65535
-      ]
-    )
-    error_message = "Possible values must be between 1 & 65535"
-  }
-  validation {
-    condition = alltrue(
-      [
-        for _, v in var.front_door_origins : v.priority >= 1 && v.priority <= 5
-      ]
-    )
-    error_message = "Possible values must be between 1 & 5"
-  }
-  validation {
-    condition = alltrue(
-      [
-        for _, v in var.front_door_origins : v.weight >= 1 && v.weight <= 1000
-      ]
-    )
-    error_message = "Possible values must be between 1 & 1000"
-  }
-  validation {
-    condition = alltrue(
-      [
-        for v in var.front_door_origins : v.private_link == null ? true : alltrue(
-          [
-            for x in v.private_link : length(x.request_message) >= 10 && length(x.request_message) <= 140
-          ]
-        )
-      ]
-    )
-    error_message = "Values must be between 1 and 140 characters in length"
-  }
-  validation {
-    condition = alltrue(
-      [
-        for _, v in var.front_door_origins : v["private_link"] == null ? true : alltrue(
-          [
-            for _, x in v["private_link"] : x["target_type"] == null ? true : contains(["blob", "blob_secondary", "web", "sites", "Gateway", "managedEnvironments", "web_secondary"], x["target_type"])
-          ]
-        )
-      ]
-    )
-    error_message = "Possible values are 'blob', 'blob_secondary', 'web', 'sites', 'Gateway', 'managedEnvironments' and 'web_secondary'. Set it to 'null' for Load balancer as origin"
-  }
-}
-
 variable "front_door_routes" {
-  type = map(object({
+  type = list(object({
+    key                       = optional(string)
     name                      = string
-    origin_group_key          = string
-    origin_keys               = list(string)
-    endpoint_key              = string
+    origin_group_name         = optional(string)
+    origin_names              = optional(list(string), [])
+    origin_host_names         = optional(list(string), [])
+    endpoint_name             = string
     forwarding_protocol       = optional(string, "HttpsOnly")
     supported_protocols       = list(string)
     patterns_to_match         = list(string)
     link_to_default_domain    = optional(bool, true)
     https_redirect_enabled    = optional(bool, true)
-    custom_domain_keys        = optional(list(string), [])
+    custom_domain_host_names  = optional(list(string), [])
     enabled                   = optional(bool, true)
     rule_set_names            = optional(list(string))
     cdn_frontdoor_origin_path = optional(string, null)
@@ -1380,20 +1384,22 @@ variable "front_door_routes" {
       content_types_to_compress     = optional(list(string))
     })), {})
   }))
-  default     = {}
+  default     = []
   description = <<DESCRIPTION
-  Manages a map of Front Door (standard/premium) Routes.
+  Manages a list of Front Door (standard/premium) Routes.
 
+  - `key` - (Optional) Legacy escape hatch. Used as the Terraform `for_each` key (resource address) instead of the `name`. Set it to the key you used with the key-based version of this module to keep the existing state without any `moved` block or state edit. Leave it unset for new deployments. Must be unique.
   - `name` - (Required) The name which should be used for this Front Door Route. Valid values must begin with a letter or number, end with a letter or number and may only contain letters, numbers and hyphens with a maximum length of 90 characters.
-  - `origin_group_key` - (Required) The key of the origin group to associate the route with.
-  - `origin_keys` - (Required) The list of the keys of the origins to associate the route with.
-  - `endpoint_key` - (Required) The key of the endpoint to associate the route with.
+  - `origin_group_name` - (Optional) The name of the origin group to associate the route with. When omitted, it is inferred from `origin_host_names`.
+  - `origin_names` - (Optional) The list of names of origins (within the origin group) to associate the route with.
+  - `origin_host_names` - (Optional) The list of host names of the origins to associate the route with. The module finds the origins and their origin group. All origins must belong to the same origin group. Can be combined with `origin_names`.
+  - `endpoint_name` - (Required) The name of the endpoint to associate the route with.
   - `forwarding_protocol` - (Optional) The Protocol that will be use when forwarding traffic to backends. Possible values are 'HttpOnly', 'HttpsOnly' or 'MatchRequest'. Defaults to 'MatchRequest'.
   - `patterns_to_match` - (Required) The route patterns of the rule.
   - `supported_protocols` - (Required) One or more Protocols supported by this Front Door Route. Possible values are 'Http' or 'Https'.
   - `https_redirect_enabled` - (Optional) Automatically redirect HTTP traffic to HTTPS traffic? Possible values are true or false. Defaults to true.
   - `link_to_default_domain` - (Optional) Should this Front Door Route be linked to the default endpoint? Possible values include true or false. Defaults to true.
-  - `custom_domain_keys` - (Optional) The list of the keys of the custom domains to associate the route with.
+  - `custom_domain_host_names` - (Optional) The list of host names of the custom domains to associate the route with.
   - `enabled` - (Optional) Should the route be enabled? Possible values are true or false. Defaults to true.
   - `rule_set_names` - (Optional) The list of the names of the rule sets to associate the route with.
   - `cdn_frontdoor_origin_path` - (Optional) The path to the origin. Defaults to null.
@@ -1405,14 +1411,14 @@ variable "front_door_routes" {
   Example Input:
 
   ```terraform
-  front_door_routes = {
-    route1_key = {
+  front_door_routes = [
+    {
       name                   = "route1"
-      endpoint_key           = "ep1_key"
-      origin_group_key       = "og1_key"
-      origin_keys            = ["origin1_key"]
+      endpoint_name           = "ep1-ex"
+      origin_group_name       = "og1"
+      origin_names            = ["origin1"]
       https_redirect_enabled = true
-      custom_domain_keys     = ["cd1_key"]
+      custom_domain_host_names     = ["contoso1.fabrikam.com"]
       patterns_to_match      = ["/*"]
       supported_protocols    = ["Http", "Https"]
       rule_set_names         = ["ruleset1"]
@@ -1425,10 +1431,28 @@ variable "front_door_routes" {
         }
       }
     }
-  }
+  ]
   ```
   DESCRIPTION
   nullable    = false
+
+  validation {
+    condition     = length([for v in var.front_door_routes : v.key if v.key != null]) == length(distinct([for v in var.front_door_routes : v.key if v.key != null]))
+    error_message = "front_door_routes: key values must be unique."
+  }
+
+  validation {
+    condition     = alltrue([for v in var.front_door_routes : v.origin_group_name != null || length(v.origin_host_names) > 0])
+    error_message = "front_door_routes: set origin_group_name, or origin_host_names so that the origin group can be inferred."
+  }
+  validation {
+    condition     = alltrue([for v in var.front_door_routes : length(v.origin_names) + length(v.origin_host_names) > 0])
+    error_message = "front_door_routes: set at least one origin through origin_names or origin_host_names."
+  }
+  validation {
+    condition     = length([for v in var.front_door_routes : v.name]) == length(distinct([for v in var.front_door_routes : v.name]))
+    error_message = "front_door_routes: route names must be unique."
+  }
 
   validation {
     condition = alltrue(
@@ -1495,10 +1519,11 @@ variable "front_door_rule_sets" {
 }
 
 variable "front_door_rules" {
-  type = map(object({
+  type = list(object({
+    key               = optional(string)
     name              = string
     order             = number
-    origin_group_key  = string
+    origin_group_name = optional(string)
     rule_set_name     = string
     behavior_on_match = optional(string, "Continue")
 
@@ -1647,13 +1672,14 @@ variable "front_door_rules" {
       })), [])
     }))
   }))
-  default     = {}
+  default     = []
   description = <<DESCRIPTION
-  Manages a map of Front Door (standard/premium) Rules. The following properties can be specified:
+  Manages a list of Front Door (standard/premium) Rules. The following properties can be specified:
 
+  - `key` - (Optional) Legacy escape hatch. Used as the Terraform `for_each` key (resource address) instead of `<rule set name>/<name>`. Set it to the key you used with the key-based version of this module to keep the existing state without any `moved` block or state edit. Leave it unset for new deployments. Must be unique.
   - `name` - (Required) The name which should be used for this Front Door Rule.
   - `order` - (Required) The order in which the rule should be applied. The order value should be sequential and begin at 1(e.g. 1, 2, 3…). A Front Door Rule with a lesser order value will be applied before a rule with a greater order value.
-  - `origin_group_key` - (Required) The origin group key to associate the rule with.
+  - `origin_group_name` - (Optional) The name of the origin group to associate the rule with. Only used when a `route_configuration_override_actions` entry sets `set_origin_groupid` to true. Use the explicit group name, or the derived name (first origin `host_name` with dots replaced by hyphens, plus `-og`) when the group has no name.
   - `rule_set_name` - (Required) The name of the rule set to associate the rule with.
   - `behavior_on_match` - (Optional) The behavior when a rule is matched. Possible values are 'Continue' or 'Stop'. Defaults to 'Continue'.
   - `actions` - (Required) An actions block as defined below:-
@@ -1778,13 +1804,13 @@ variable "front_door_rules" {
   Example Input:
 
   ```terraform
-  front_door_rules = {
-    rule1_key = {
+  front_door_rules = [
+    {
       name              = "examplerule1"
       order             = 1
       behavior_on_match = "Continue"
       rule_set_name     = "ruleset1"
-      origin_group_key  = "og1_key"
+      origin_group_name  = "og1"
       actions = {
 
         url_rewrite_actions = [{
@@ -1884,10 +1910,20 @@ variable "front_door_rules" {
         }]
       }
     }
-  }
+  ]
   ```
   DESCRIPTION
   nullable    = false
+
+  validation {
+    condition     = length([for v in var.front_door_rules : v.key if v.key != null]) == length(distinct([for v in var.front_door_rules : v.key if v.key != null]))
+    error_message = "front_door_rules: key values must be unique."
+  }
+
+  validation {
+    condition     = length([for v in var.front_door_rules : "${v.rule_set_name}/${v.name}"]) == length(distinct([for v in var.front_door_rules : "${v.rule_set_name}/${v.name}"]))
+    error_message = "front_door_rules: rule names must be unique within a rule set."
+  }
 
   validation {
     condition     = alltrue([for _, v in var.front_door_rules : v.behavior_on_match != null ? contains(["Continue", "Stop"], v.behavior_on_match) : true])
@@ -1996,28 +2032,40 @@ variable "front_door_rules" {
 }
 
 variable "front_door_secrets" {
-  type = map(object({
+  type = list(object({
+    key                      = optional(string)
     name                     = string
     key_vault_certificate_id = string
   }))
-  default     = {}
+  default     = []
   description = <<DESCRIPTION
-  Manages a map of Front Door (standard/premium) Secrets.
+  Manages a list of Front Door (standard/premium) Secrets.
 
+  - `key` - (Optional) Legacy escape hatch. Used as the Terraform `for_each` key (resource address) instead of the `name`. Set it to the key you used with the key-based version of this module to keep the existing state without any `moved` block or state edit. Leave it unset for new deployments. Must be unique.
   - `name` - (Required) The name which should be used for this Front Door Secret.
   - `key_vault_certificate_id` - (Required) The ID of the Key Vault certificate resource to use.
   Example Input:
 
   ```terraform
-  front_door_secrets = {
-    secret1_key = {
+  front_door_secrets = [
+    {
       name                     = "Front-door-certificate"
       key_vault_certificate_id = azurerm_key_vault_certificate.keyvaultcert.versionless_id
     }
-  }
+  ]
   ```
   DESCRIPTION
   nullable    = false
+
+  validation {
+    condition     = length([for v in var.front_door_secrets : v.key if v.key != null]) == length(distinct([for v in var.front_door_secrets : v.key if v.key != null]))
+    error_message = "front_door_secrets: key values must be unique."
+  }
+
+  validation {
+    condition     = length([for v in var.front_door_secrets : v.name]) == length(distinct([for v in var.front_door_secrets : v.name]))
+    error_message = "front_door_secrets: secret names must be unique."
+  }
 
   validation {
     condition     = alltrue([for _, v in var.front_door_secrets : _ == null ? true : can(regex("^[a-zA-Z0-9][-a-zA-Z0-9]{0,258}[a-zA-Z0-9]$", v.name))])
@@ -2026,63 +2074,75 @@ variable "front_door_secrets" {
 }
 
 variable "front_door_security_policies" {
-  type = map(object({
+  type = list(object({
+    key  = optional(string)
     name = string
     firewall = object({
-      front_door_firewall_policy_key = string
+      front_door_firewall_policy_name = string
       association = object({
-        domain_keys       = optional(list(string), [])
-        endpoint_keys     = optional(list(string), [])
+        domain_host_names = optional(list(string), [])
+        endpoint_names    = optional(list(string), [])
         patterns_to_match = list(string)
       })
     })
   }))
-  default     = {}
+  default     = []
   description = <<DESCRIPTION
-  Manages a map of Front Door (standard/premium) Security Policies.
+  Manages a list of Front Door (standard/premium) Security Policies.
 
+  - `key` - (Optional) Legacy escape hatch. Used as the Terraform `for_each` key (resource address) instead of the `name`. Set it to the key you used with the key-based version of this module to keep the existing state without any `moved` block or state edit. Leave it unset for new deployments. Must be unique.
   - `name` - (Required) The name which should be used for this Front Door Security Policy. Possible values must not be an empty string.
   - `firewall` - (Required) An firewall block as defined below: -
-  - `front_door_firewall_policy_key` - (Required) the key of Front Door Firewall Policy that should be linked to this Front Door Security Policy.
+  - `front_door_firewall_policy_name` - (Required) the name of the Front Door Firewall Policy that should be linked to this Front Door Security Policy.
   - `association` - (Required) An association block as defined below:-
-  - `domain_keys` - (Optional) list of the domain keys to associate with the firewall policy. Provide either domain keys or endpoint keys or both.
-  - `endpoint_keys` - (Optional) list of the endpoint keys to associate with the firewall policy. Provide either domain keys or endpoint keys or both.
+  - `domain_host_names` - (Optional) list of custom domain host names to associate with the firewall policy. Provide either domain host names or endpoint names or both.
+  - `endpoint_names` - (Optional) list of endpoint names to associate with the firewall policy. Provide either domain host names or endpoint names or both.
   - `patterns_to_match` - (Required) The list of paths to match for this firewall policy. Possible value includes /*
   Example Input:
 
   ```terraform
-  front_door_security_policies = {
-    secpol1_key = {
+  front_door_security_policies = [
+    {
       name = "firewallpolicyforep1cd1"
       firewall = {
-        front_door_firewall_policy_key = "fd_waf1_key"
+        front_door_firewall_policy_name = "examplecdnfdwafpolicy1"
         association = {
-          endpoint_keys     = ["ep1_key"]
-          domain_keys       = ["cd1_key"]
+          endpoint_names     = ["ep1-ex"]
+          domain_host_names       = ["contoso1.fabrikam.com"]
           patterns_to_match = ["/*"]
         }
       }
     }
-  }
+  ]
   ```
   DESCRIPTION
   nullable    = false
 
   validation {
-    condition     = length(flatten([for name, policy in var.front_door_security_policies : concat(policy.firewall.association.domain_keys, policy.firewall.association.endpoint_keys)])) == length(distinct(flatten([for name, policy in var.front_door_security_policies : concat(policy.firewall.association.domain_keys, policy.firewall.association.endpoint_keys)])))
-    error_message = "Endpoint and custom domains can only be associated with a single security policy at a time. Please review endpoint_keys and domain_keys and ensure that the endpoint or custom domain keys is not provided in multiple security policies."
+    condition     = length([for v in var.front_door_security_policies : v.key if v.key != null]) == length(distinct([for v in var.front_door_security_policies : v.key if v.key != null]))
+    error_message = "front_door_security_policies: key values must be unique."
+  }
+
+  validation {
+    condition     = length([for v in var.front_door_security_policies : v.name]) == length(distinct([for v in var.front_door_security_policies : v.name]))
+    error_message = "front_door_security_policies: security policy names must be unique."
+  }
+
+  validation {
+    condition     = length(flatten([for name, policy in var.front_door_security_policies : concat(policy.firewall.association.domain_host_names, policy.firewall.association.endpoint_names)])) == length(distinct(flatten([for name, policy in var.front_door_security_policies : concat(policy.firewall.association.domain_host_names, policy.firewall.association.endpoint_names)])))
+    error_message = "Endpoint and custom domains can only be associated with a single security policy at a time. Please review endpoint_names and domain_host_names and ensure that the endpoint or custom domain is not provided in multiple security policies."
   }
   validation {
     condition     = alltrue([for _, v in var.front_door_security_policies : v.name != ""])
     error_message = "Security policy name must not be an empty string."
   }
   validation {
-    condition     = alltrue([for name, policy in var.front_door_security_policies : length(policy.firewall.association.domain_keys) == 0 ? length(policy.firewall.association.endpoint_keys) > 0 : true])
+    condition     = alltrue([for name, policy in var.front_door_security_policies : length(policy.firewall.association.domain_host_names) == 0 ? length(policy.firewall.association.endpoint_names) > 0 : true])
     error_message = "Provide either domain names or endpoint names or both."
   }
   validation {
     condition = alltrue([for name, policy in var.front_door_security_policies :
-    (length(policy.firewall.association.domain_keys) > 0 || length(policy.firewall.association.endpoint_keys) > 0) && (policy.firewall.association.domain_keys != null || policy.firewall.association.endpoint_keys != null)])
+    (length(policy.firewall.association.domain_host_names) > 0 || length(policy.firewall.association.endpoint_names) > 0) && (policy.firewall.association.domain_host_names != null || policy.firewall.association.endpoint_names != null)])
     error_message = "Provide either domain names or endpoint names or both, and ensure they are not empty."
   }
 }

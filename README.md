@@ -673,83 +673,87 @@ Default: `true`
 
 ### <a name="input_front_door_custom_domains"></a> [front\_door\_custom\_domains](#input\_front\_door\_custom\_domains)
 
-Description:   Manages a map of Front Door (standard/premium) Custom Domains.
+Description:   Manages a list of Front Door (standard/premium) Custom Domains. Custom domains are identified by their `host_name`, which must be unique.
 
-  - `name` - (Required) The name which should be used for this Front Door Custom Domain.
+  - `host_name` - (Required) The host name of the domain. The host\_name field must be the FQDN of your domain. Routes and security policies reference the domain by this value.
+  - `key` - (Optional) Legacy escape hatch. Used as the Terraform `for_each` key (resource address) instead of the `host_name`. Set it to the key you used with the key-based version of this module to keep the existing state without any `moved` block or state edit. Leave it unset for new deployments. Must be unique.
+  - `name` - (Optional) The name which should be used for this Front Door Custom Domain. Defaults to the `host_name` with dots replaced by hyphens.
   - `dns_zone_id` - (Optional) The ID of the Azure DNS Zone which should be used for this Front Door Custom Domain.
-  - `host_name` - (Required) The host name of the domain. The host\_name field must be the FQDN of your domain.
   - `tls` - (Required) A tls block as defined below : -
     - `certificate_type` - (Optional) Defines the source of the SSL certificate. Possible values include 'CustomerCertificate' and 'ManagedCertificate'. Defaults to 'ManagedCertificate'.
-    - `cdn_frontdoor_secret_key` - (Optional) Key of the Front Door Secret object. This is required when certificate\_type is 'CustomerCertificate'.  
+    - `cdn_frontdoor_secret_name` - (Optional) Name of the Front Door Secret (see `front_door_secrets`). This is required when certificate\_type is 'CustomerCertificate'.  
   Example Input:
 
   ```terraform
-  front_door_custom_domains = {
-    contoso1_key = {
-        name        = "contoso1"
-        dns_zone_id = azurerm_dns_zone.dnszone.id
-        host_name   = "contoso1.fabrikam.com"
-        tls = {
-          certificate_type    = "ManagedCertificate"
-          cdn_frontdoor_secret_key = "Secret1_key"
-        }
+  front_door_custom_domains = [
+    {
+      host_name   = "contoso1.fabrikam.com"
+      dns_zone_id = azurerm_dns_zone.dnszone.id
+      tls = {
+        certificate_type          = "CustomerCertificate"
+        cdn_frontdoor_secret_name = "Front-door-certificate"
       }
     }
+  ]
 ```
 
 Type:
 
 ```hcl
-map(object({
-    name        = string
-    dns_zone_id = optional(string, null)
+list(object({
+    key         = optional(string)
     host_name   = string
+    name        = optional(string)
+    dns_zone_id = optional(string, null)
     tls = object({
-      certificate_type         = optional(string, "ManagedCertificate")
-      cdn_frontdoor_secret_key = optional(string, null)
+      certificate_type          = optional(string, "ManagedCertificate")
+      cdn_frontdoor_secret_name = optional(string, null)
     })
   }))
 ```
 
-Default: `{}`
+Default: `[]`
 
 ### <a name="input_front_door_endpoints"></a> [front\_door\_endpoints](#input\_front\_door\_endpoints)
 
-Description:   Manages a map of Front Door (standard/premium) Endpoints.
+Description:   Manages a list of Front Door (standard/premium) Endpoints.
 
+  - `key` - (Optional) Legacy escape hatch. Used as the Terraform `for_each` key (resource address) instead of the `name`. Set it to the key you used with the key-based version of this module to keep the existing state without any `moved` block or state edit. Leave it unset for new deployments. Must be unique.
   - `name` - (Required) The name which should be used for this Front Door Endpoint.
   - `enabled` - (Optional) Specifies if this Front Door Endpoint is enabled? Defaults to true.
   - `tags` - (Optional) Specifies a mapping of tags which should be assigned to the Front Door Endpoint.  
   Example Input:
 
   ```terraform
-  front_door_endpoints = {
-    ep1_key = {
+  front_door_endpoints = [
+    {
         name = "ep1-ex"
         enabled = true
         tags = {
           environment = "avm-demo"
         }
       }
-    }
+    ]
 ```
 
 Type:
 
 ```hcl
-map(object({
+list(object({
+    key     = optional(string)
     name    = string
     enabled = optional(bool, true)
     tags    = optional(map(any))
   }))
 ```
 
-Default: `{}`
+Default: `[]`
 
 ### <a name="input_front_door_firewall_policies"></a> [front\_door\_firewall\_policies](#input\_front\_door\_firewall\_policies)
 
-Description:   Manages a map of Front Door (standard/premium) Firewall Policies.
+Description:   Manages a list of Front Door (standard/premium) Firewall Policies.
 
+  - `key` - (Optional) Legacy escape hatch. Used as the Terraform `for_each` key (resource address) instead of the `name`. Set it to the key you used with the key-based version of this module to keep the existing state without any `moved` block or state edit. Leave it unset for new deployments. Must be unique.
   - `name` - (Required) The name which should be used for this Front Door Security Policy. Possible values must not be an empty string.
   - `resource_group_name` - (Required) The name of the resource group. Changing this forces a new resource to be created.
   - `sku_name` - (Required) The sku's pricing tier for this Front Door Firewall Policy. Possible values include 'Standard\_AzureFrontDoor' or 'Premium\_AzureFrontDoor'.
@@ -801,8 +805,8 @@ Description:   Manages a map of Front Door (standard/premium) Firewall Policies.
   Example Input:
 
   ```terraform
-  front_door_firewall_policies = {
-      fd_waf1_key = {
+  front_door_firewall_policies = [
+    {
       name                              = "examplecdnfdwafpolicy1"
       resource_group_name               = azurerm_resource_group.this.name
       sku_name                          = "Premium_AzureFrontDoor" # Ensure SKU_name for WAF is similar to SKU_name for front door profile.
@@ -914,13 +918,14 @@ Description:   Manages a map of Front Door (standard/premium) Firewall Policies.
         }
       }
     }
-  }
+  ]
 ```
 
 Type:
 
 ```hcl
-map(object({
+list(object({
+    key                               = optional(string)
     name                              = string
     resource_group_name               = string
     sku_name                          = string
@@ -979,13 +984,30 @@ map(object({
   }))
 ```
 
-Default: `{}`
+Default: `[]`
 
 ### <a name="input_front_door_origin_groups"></a> [front\_door\_origin\_groups](#input\_front\_door\_origin\_groups)
 
-Description:   Manages a map of Front Door (standard/premium) Origin groups.
+Description:   Manages a list of Front Door (standard/premium) Origin groups.
 
-  - `name` - (Required) The name which should be used for this Front Door Origin Group.
+  - `key` - (Optional) Legacy escape hatch. Used as the Terraform `for_each` key (resource address) instead of the group name. Set it to the key you used with the key-based version of this module to keep the existing state without any `moved` block or state edit. Leave it unset for new deployments. Must be unique.
+  - `name` - (Optional) The name which should be used for this Front Door Origin Group. Always used as given when set. When omitted, it defaults to the `host_name` of the first origin with dots replaced by hyphens and the suffix `-og` (for example `app.contoso.com` becomes `app-contoso-com-og`). Set it explicitly on existing deployments, because changing the name of an Azure resource recreates it.
+  - `origins` - (Required) The list of origins of this origin group. Origins are nested in their group, so the group never has to be referenced from an origin.
+      - `host_name` - (Required) The IPv4 address, IPv6 address or Domain name of the Origin. Must be unique across all origin groups, so that routes can reference an origin by host name.
+      - `key` - (Optional) Legacy escape hatch. Used as the Terraform `for_each` key instead of `<group name>/<origin name>`. Set it to the key you used with the key-based version of this module to keep the existing state. Leave it unset for new deployments. Must be unique.
+      - `name` - (Optional) The name which should be used for this Front Door Origin. Always used as given when set. When omitted, it defaults to the `host_name` with dots replaced by hyphens.
+      - `certificate_name_check_enabled` - (Optional) Specifies whether certificate name checks are enabled for this origin. Defaults to true.
+      - `enabled` - (Optional) Should the origin be enabled? Defaults to true.
+      - `http_port` - (Optional) The value of the HTTP port. Must be between 1 and 65535. Defaults to 80.
+      - `https_port` - (Optional) The value of the HTTPS port. Must be between 1 and 65535. Defaults to 443.
+      - `host_header` - (Optional) The host header value (an IPv4 address, IPv6 address or Domain name) which is sent to the origin with each request. If unspecified the hostname from the request will be used.
+      - `priority` - (Optional) Priority of origin in given origin group for load balancing. Must be between 1 and 5 (inclusive). Defaults to 1.
+      - `weight` - (Optional) The weight of the origin in a given origin group for load balancing. Must be between 1 and 1000. Defaults to 500.
+      - `private_link` - (Optional) A private\_link object as defined below:-
+          - `request_message` - (Optional) The request message submitted to the private link target when requesting the connection. Between 10 and 140 characters.
+          - `target_type` - (Optional) The type of target for this Private Link Endpoint. Possible values are `blob`, `blob_secondary`, `web`, `sites`, `Gateway`, `managedEnvironments` and `web_secondary`. Set to null for a load balancer origin.
+          - `location` - (Required) The location where the Private Link resource should exist.
+          - `private_link_target_id` - (Required) The ID of the Private Link resource to connect to.
   - `load_balancing` - (Required) A load\_balancing block as defined below:-
       - `additional_latency_in_milliseconds` - (Optional) Specifies the additional latency in milliseconds for probes to fall into the lowest latency bucket. Possible values are between 0 and 1000 milliseconds (inclusive). Defaults to 50
       - `sample_size` - (Optional) Specifies the number of samples to consider for load balancing decisions. Possible values are between 0 and 255 (inclusive). Defaults to 4.
@@ -998,9 +1020,15 @@ Description:   Manages a map of Front Door (standard/premium) Origin groups.
   Example Input:
 
   ```terraform
-  front_door_origin_groups = {
-    og1_key = {
-      name = "og1"
+  front_door_origin_groups = [
+    {
+      name = "og1" # optional
+      origins = [
+        {
+          host_name   = "app.contoso.com" # name defaults to "app-contoso-com"
+          host_header = "app.contoso.com"
+        }
+      ]
       health_probe = {
         hp1 = {
           interval_in_seconds = 240
@@ -1017,14 +1045,33 @@ Description:   Manages a map of Front Door (standard/premium) Origin groups.
         }
       }
     }
-  }
+  ]
 ```
 
 Type:
 
 ```hcl
-map(object({
-    name = string
+list(object({
+    key  = optional(string)
+    name = optional(string)
+    origins = list(object({
+      key                            = optional(string)
+      host_name                      = string
+      name                           = optional(string)
+      certificate_name_check_enabled = optional(bool, true)
+      enabled                        = optional(bool, true)
+      http_port                      = optional(number, 80)
+      https_port                     = optional(number, 443)
+      host_header                    = optional(string, null)
+      priority                       = optional(number, 1)
+      weight                         = optional(number, 500)
+      private_link = optional(object({
+        request_message        = optional(string, "Access request for CDN FrontDoor Private Link Origin")
+        target_type            = optional(string, null)
+        location               = string
+        private_link_target_id = string
+      }), null)
+    }))
     health_probe = optional(map(object({
       interval_in_seconds = number
       path                = optional(string, "/")
@@ -1039,94 +1086,24 @@ map(object({
   }))
 ```
 
-Default: `{}`
-
-### <a name="input_front_door_origins"></a> [front\_door\_origins](#input\_front\_door\_origins)
-
-Description:   Manages a map of Front Door (standard/premium) Origins.
-
-  - `name` - (Required) The name which should be used for this Front Door Origin.
-  - `origin_group_key` - (Required) The key of the origin group to which this origin belongs.
-  - `host_name` - (Required) The IPv4 address, IPv6 address or Domain name of the Origin.
-  - `certificate_name_check_enabled` - (Required) Specifies whether certificate name checks are enabled for this origin.
-  - `enabled` - (Optional) Should the origin be enabled? Possible values are true or false. Defaults to true.
-  - `http_port` - (Optional) The value of the HTTP port. Must be between 1 and 65535. Defaults to 80
-  - `https_port` - (Optional) The value of the HTTPS port. Must be between 1 and 65535. Defaults to 443.
-  - `origin_host_header` - (Optional) The host header value (an IPv4 address, IPv6 address or Domain name) which is sent to the origin with each request. If unspecified the hostname from the request will be used.
-  - `priority` - (Optional) Priority of origin in given origin group for load balancing. Higher priorities will not be used for load balancing if any lower priority origin is healthy. Must be between 1 and 5 (inclusive). Defaults to 1.
-  - `weight` - (Optional) The weight of the origin in a given origin group for load balancing. Must be between 1 and 1000. Defaults to 500.
-  - `private_link` - (Optional) A private\_link block as defined below:-
-      - `request_message` - (Optional) Specifies the request message that will be submitted to the private\_link\_target\_id when requesting the private link endpoint connection. Values must be between 1 and 140 characters in length. Defaults to Access request for CDN FrontDoor Private Link Origin.
-      - `target_type` - (Optional) Specifies the type of target for this Private Link Endpoint. Possible values are `blob`, `blob_secondary`, `web`, `sites`, `Gateway`, `managedEnvironments` and `web_secondary`.
-      - `location` - (Required) Specifies the location where the Private Link resource should exist. Changing this forces a new resource to be created.
-      - `private_link_target_id` - (Required) Specifies the ID of the Private Link resource to connect to.
-
-  Example Input:
-
-  ```terraform
-  front_door_origins = {
-      origin1_key = {
-        name                           = "origin1"
-        origin_group_key               = "og1_key"
-        enabled                        = true
-        certificate_name_check_enabled = true
-        host_name                      = replace(replace(azurerm_storage_account.storage.primary_blob_endpoint, "https://", ""), "/", "")
-        http_port                      = 80
-        https_port                     = 443
-        host_header                    = replace(replace(azurerm_storage_account.storage.primary_blob_endpoint, "https://", ""), "/", "")
-        priority                       = 1
-        weight                         = 1
-        private_link = {
-          pl = {
-            request_message        = "Please approve this private link connection"
-            target_type            = "blob"
-            location               = azurerm_storage_account.storage.location
-            private_link_target_id = azurerm_storage_account.storage.id
-          }
-        }
-      }
-    }
-```
-
-Type:
-
-```hcl
-map(object({
-    name                           = string
-    origin_group_key               = string
-    host_name                      = string
-    certificate_name_check_enabled = string
-    enabled                        = optional(bool, true)
-    http_port                      = optional(number, 80)
-    https_port                     = optional(number, 443)
-    host_header                    = optional(string, null)
-    priority                       = optional(number, 1)
-    weight                         = optional(number, 500)
-    private_link = optional(map(object({
-      request_message        = string
-      target_type            = optional(string, null)
-      location               = string
-      private_link_target_id = string
-    })), null)
-  }))
-```
-
-Default: `{}`
+Default: `[]`
 
 ### <a name="input_front_door_routes"></a> [front\_door\_routes](#input\_front\_door\_routes)
 
-Description:   Manages a map of Front Door (standard/premium) Routes.
+Description:   Manages a list of Front Door (standard/premium) Routes.
 
+  - `key` - (Optional) Legacy escape hatch. Used as the Terraform `for_each` key (resource address) instead of the `name`. Set it to the key you used with the key-based version of this module to keep the existing state without any `moved` block or state edit. Leave it unset for new deployments. Must be unique.
   - `name` - (Required) The name which should be used for this Front Door Route. Valid values must begin with a letter or number, end with a letter or number and may only contain letters, numbers and hyphens with a maximum length of 90 characters.
-  - `origin_group_key` - (Required) The key of the origin group to associate the route with.
-  - `origin_keys` - (Required) The list of the keys of the origins to associate the route with.
-  - `endpoint_key` - (Required) The key of the endpoint to associate the route with.
+  - `origin_group_name` - (Optional) The name of the origin group to associate the route with. When omitted, it is inferred from `origin_host_names`.
+  - `origin_names` - (Optional) The list of names of origins (within the origin group) to associate the route with.
+  - `origin_host_names` - (Optional) The list of host names of the origins to associate the route with. The module finds the origins and their origin group. All origins must belong to the same origin group. Can be combined with `origin_names`.
+  - `endpoint_name` - (Required) The name of the endpoint to associate the route with.
   - `forwarding_protocol` - (Optional) The Protocol that will be use when forwarding traffic to backends. Possible values are 'HttpOnly', 'HttpsOnly' or 'MatchRequest'. Defaults to 'MatchRequest'.
   - `patterns_to_match` - (Required) The route patterns of the rule.
   - `supported_protocols` - (Required) One or more Protocols supported by this Front Door Route. Possible values are 'Http' or 'Https'.
   - `https_redirect_enabled` - (Optional) Automatically redirect HTTP traffic to HTTPS traffic? Possible values are true or false. Defaults to true.
   - `link_to_default_domain` - (Optional) Should this Front Door Route be linked to the default endpoint? Possible values include true or false. Defaults to true.
-  - `custom_domain_keys` - (Optional) The list of the keys of the custom domains to associate the route with.
+  - `custom_domain_host_names` - (Optional) The list of host names of the custom domains to associate the route with.
   - `enabled` - (Optional) Should the route be enabled? Possible values are true or false. Defaults to true.
   - `rule_set_names` - (Optional) The list of the names of the rule sets to associate the route with.
   - `cdn_frontdoor_origin_path` - (Optional) The path to the origin. Defaults to null.
@@ -1138,14 +1115,14 @@ Description:   Manages a map of Front Door (standard/premium) Routes.
   Example Input:
 
   ```terraform
-  front_door_routes = {
-    route1_key = {
+  front_door_routes = [
+    {
       name                   = "route1"
-      endpoint_key           = "ep1_key"
-      origin_group_key       = "og1_key"
-      origin_keys            = ["origin1_key"]
+      endpoint_name           = "ep1-ex"
+      origin_group_name       = "og1"
+      origin_names            = ["origin1"]
       https_redirect_enabled = true
-      custom_domain_keys     = ["cd1_key"]
+      custom_domain_host_names     = ["contoso1.fabrikam.com"]
       patterns_to_match      = ["/*"]
       supported_protocols    = ["Http", "Https"]
       rule_set_names         = ["ruleset1"]
@@ -1158,23 +1135,25 @@ Description:   Manages a map of Front Door (standard/premium) Routes.
         }
       }
     }
-  }
+  ]
 ```
 
 Type:
 
 ```hcl
-map(object({
+list(object({
+    key                       = optional(string)
     name                      = string
-    origin_group_key          = string
-    origin_keys               = list(string)
-    endpoint_key              = string
+    origin_group_name         = optional(string)
+    origin_names              = optional(list(string), [])
+    origin_host_names         = optional(list(string), [])
+    endpoint_name             = string
     forwarding_protocol       = optional(string, "HttpsOnly")
     supported_protocols       = list(string)
     patterns_to_match         = list(string)
     link_to_default_domain    = optional(bool, true)
     https_redirect_enabled    = optional(bool, true)
-    custom_domain_keys        = optional(list(string), [])
+    custom_domain_host_names  = optional(list(string), [])
     enabled                   = optional(bool, true)
     rule_set_names            = optional(list(string))
     cdn_frontdoor_origin_path = optional(string, null)
@@ -1187,7 +1166,7 @@ map(object({
   }))
 ```
 
-Default: `{}`
+Default: `[]`
 
 ### <a name="input_front_door_rule_sets"></a> [front\_door\_rule\_sets](#input\_front\_door\_rule\_sets)
 
@@ -1200,11 +1179,12 @@ Default: `[]`
 
 ### <a name="input_front_door_rules"></a> [front\_door\_rules](#input\_front\_door\_rules)
 
-Description:   Manages a map of Front Door (standard/premium) Rules. The following properties can be specified:
+Description:   Manages a list of Front Door (standard/premium) Rules. The following properties can be specified:
 
+  - `key` - (Optional) Legacy escape hatch. Used as the Terraform `for_each` key (resource address) instead of `<rule set name>/<name>`. Set it to the key you used with the key-based version of this module to keep the existing state without any `moved` block or state edit. Leave it unset for new deployments. Must be unique.
   - `name` - (Required) The name which should be used for this Front Door Rule.
   - `order` - (Required) The order in which the rule should be applied. The order value should be sequential and begin at 1(e.g. 1, 2, 3…). A Front Door Rule with a lesser order value will be applied before a rule with a greater order value.
-  - `origin_group_key` - (Required) The origin group key to associate the rule with.
+  - `origin_group_name` - (Optional) The name of the origin group to associate the rule with. Only used when a `route_configuration_override_actions` entry sets `set_origin_groupid` to true. Use the explicit group name, or the derived name (first origin `host_name` with dots replaced by hyphens, plus `-og`) when the group has no name.
   - `rule_set_name` - (Required) The name of the rule set to associate the rule with.
   - `behavior_on_match` - (Optional) The behavior when a rule is matched. Possible values are 'Continue' or 'Stop'. Defaults to 'Continue'.
   - `actions` - (Required) An actions block as defined below:-
@@ -1329,13 +1309,13 @@ Description:   Manages a map of Front Door (standard/premium) Rules. The followi
   Example Input:
 
   ```terraform
-  front_door_rules = {
-    rule1_key = {
+  front_door_rules = [
+    {
       name              = "examplerule1"
       order             = 1
       behavior_on_match = "Continue"
       rule_set_name     = "ruleset1"
-      origin_group_key  = "og1_key"
+      origin_group_name  = "og1"
       actions = {
 
         url_rewrite_actions = [{
@@ -1435,16 +1415,17 @@ Description:   Manages a map of Front Door (standard/premium) Rules. The followi
         }]
       }
     }
-  }
+  ]
 ```
 
 Type:
 
 ```hcl
-map(object({
+list(object({
+    key               = optional(string)
     name              = string
     order             = number
-    origin_group_key  = string
+    origin_group_name = optional(string)
     rule_set_name     = string
     behavior_on_match = optional(string, "Continue")
 
@@ -1595,82 +1576,86 @@ map(object({
   }))
 ```
 
-Default: `{}`
+Default: `[]`
 
 ### <a name="input_front_door_secrets"></a> [front\_door\_secrets](#input\_front\_door\_secrets)
 
-Description:   Manages a map of Front Door (standard/premium) Secrets.
+Description:   Manages a list of Front Door (standard/premium) Secrets.
 
+  - `key` - (Optional) Legacy escape hatch. Used as the Terraform `for_each` key (resource address) instead of the `name`. Set it to the key you used with the key-based version of this module to keep the existing state without any `moved` block or state edit. Leave it unset for new deployments. Must be unique.
   - `name` - (Required) The name which should be used for this Front Door Secret.
   - `key_vault_certificate_id` - (Required) The ID of the Key Vault certificate resource to use.  
   Example Input:
 
   ```terraform
-  front_door_secrets = {
-    secret1_key = {
+  front_door_secrets = [
+    {
       name                     = "Front-door-certificate"
       key_vault_certificate_id = azurerm_key_vault_certificate.keyvaultcert.versionless_id
     }
-  }
+  ]
 ```
 
 Type:
 
 ```hcl
-map(object({
+list(object({
+    key                      = optional(string)
     name                     = string
     key_vault_certificate_id = string
   }))
 ```
 
-Default: `{}`
+Default: `[]`
 
 ### <a name="input_front_door_security_policies"></a> [front\_door\_security\_policies](#input\_front\_door\_security\_policies)
 
-Description:   Manages a map of Front Door (standard/premium) Security Policies.
+Description:   Manages a list of Front Door (standard/premium) Security Policies.
 
+  - `key` - (Optional) Legacy escape hatch. Used as the Terraform `for_each` key (resource address) instead of the `name`. Set it to the key you used with the key-based version of this module to keep the existing state without any `moved` block or state edit. Leave it unset for new deployments. Must be unique.
   - `name` - (Required) The name which should be used for this Front Door Security Policy. Possible values must not be an empty string.
   - `firewall` - (Required) An firewall block as defined below: -
-  - `front_door_firewall_policy_key` - (Required) the key of Front Door Firewall Policy that should be linked to this Front Door Security Policy.
+  - `front_door_firewall_policy_name` - (Required) the name of the Front Door Firewall Policy that should be linked to this Front Door Security Policy.
   - `association` - (Required) An association block as defined below:-
-  - `domain_keys` - (Optional) list of the domain keys to associate with the firewall policy. Provide either domain keys or endpoint keys or both.
-  - `endpoint_keys` - (Optional) list of the endpoint keys to associate with the firewall policy. Provide either domain keys or endpoint keys or both.
+  - `domain_host_names` - (Optional) list of custom domain host names to associate with the firewall policy. Provide either domain host names or endpoint names or both.
+  - `endpoint_names` - (Optional) list of endpoint names to associate with the firewall policy. Provide either domain host names or endpoint names or both.
   - `patterns_to_match` - (Required) The list of paths to match for this firewall policy. Possible value includes /*  
   Example Input:
 
   ```terraform
-  front_door_security_policies = {
-    secpol1_key = {
+  front_door_security_policies = [
+    {
       name = "firewallpolicyforep1cd1"
       firewall = {
-        front_door_firewall_policy_key = "fd_waf1_key"
+        front_door_firewall_policy_name = "examplecdnfdwafpolicy1"
         association = {
-          endpoint_keys     = ["ep1_key"]
-          domain_keys       = ["cd1_key"]
+          endpoint_names     = ["ep1-ex"]
+          domain_host_names       = ["contoso1.fabrikam.com"]
           patterns_to_match = ["/*"]
         }
       }
     }
-  }
+  ]
 ```
 
 Type:
 
 ```hcl
-map(object({
+list(object({
+    key  = optional(string)
     name = string
     firewall = object({
-      front_door_firewall_policy_key = string
+      front_door_firewall_policy_name = string
       association = object({
-        domain_keys       = optional(list(string), [])
-        endpoint_keys     = optional(list(string), [])
+        domain_host_names = optional(list(string), [])
+        endpoint_names    = optional(list(string), [])
         patterns_to_match = list(string)
       })
     })
   }))
 ```
 
-Default: `{}`
+Default: `[]`
 
 ### <a name="input_lock"></a> [lock](#input\_lock)
 

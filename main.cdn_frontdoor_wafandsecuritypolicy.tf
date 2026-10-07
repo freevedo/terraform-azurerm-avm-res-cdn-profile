@@ -1,5 +1,5 @@
 resource "azurerm_cdn_frontdoor_firewall_policy" "wafs" {
-  for_each = var.front_door_firewall_policies != null ? var.front_door_firewall_policies : {}
+  for_each = local.front_door_firewall_policies
 
   mode                              = each.value.mode
   name                              = each.value.name
@@ -96,14 +96,14 @@ resource "azurerm_cdn_frontdoor_firewall_policy" "wafs" {
 }
 
 resource "azurerm_cdn_frontdoor_security_policy" "security_policies" {
-  for_each = try(var.front_door_security_policies != null ? var.front_door_security_policies : {})
+  for_each = local.front_door_security_policies
 
   cdn_frontdoor_profile_id = azapi_resource.front_door_profile.id
   name                     = each.value.name
 
   security_policies {
     firewall {
-      cdn_frontdoor_firewall_policy_id = azurerm_cdn_frontdoor_firewall_policy.wafs[each.value.firewall.front_door_firewall_policy_key].id
+      cdn_frontdoor_firewall_policy_id = azurerm_cdn_frontdoor_firewall_policy.wafs[local.front_door_firewall_policy_keys_by_name[each.value.firewall.front_door_firewall_policy_name]].id
 
       association {
         patterns_to_match = ["/*"]

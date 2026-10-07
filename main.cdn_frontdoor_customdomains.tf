@@ -1,5 +1,5 @@
 resource "azurerm_cdn_frontdoor_custom_domain" "cds" {
-  for_each = var.front_door_custom_domains
+  for_each = local.front_door_custom_domains
 
   cdn_frontdoor_profile_id = azapi_resource.front_door_profile.id
   host_name                = each.value.host_name
@@ -7,7 +7,7 @@ resource "azurerm_cdn_frontdoor_custom_domain" "cds" {
   dns_zone_id              = each.value.dns_zone_id
 
   tls {
-    cdn_frontdoor_secret_id = each.value.tls.certificate_type == "CustomerCertificate" ? azurerm_cdn_frontdoor_secret.frontdoorsecret[each.value.tls.cdn_frontdoor_secret_key].id : null
+    cdn_frontdoor_secret_id = each.value.tls.certificate_type == "CustomerCertificate" ? azurerm_cdn_frontdoor_secret.frontdoorsecret[local.front_door_secret_keys_by_name[each.value.tls.cdn_frontdoor_secret_name]].id : null
     certificate_type        = each.value.tls.certificate_type
   }
 }

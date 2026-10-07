@@ -1,5 +1,5 @@
 resource "azurerm_cdn_frontdoor_secret" "frontdoorsecret" {
-  for_each = var.front_door_secrets
+  for_each = local.front_door_secrets
 
   cdn_frontdoor_profile_id = azapi_resource.front_door_profile.id
   name                     = each.value.name
