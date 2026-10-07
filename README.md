@@ -676,6 +676,7 @@ Default: `true`
 Description:   Manages a list of Front Door (standard/premium) Custom Domains. Custom domains are identified by their `host_name`, which must be unique.
 
   - `host_name` - (Required) The host name of the domain. The host\_name field must be the FQDN of your domain. Routes and security policies reference the domain by this value.
+  - `key` - (Optional) Legacy escape hatch. Used as the Terraform `for_each` key (resource address) instead of the `host_name`. Set it to the key you used with the key-based version of this module to keep the existing state without any `moved` block or state edit. Leave it unset for new deployments. Must be unique.
   - `name` - (Optional) The name which should be used for this Front Door Custom Domain. Defaults to the `host_name` with dots replaced by hyphens.
   - `dns_zone_id` - (Optional) The ID of the Azure DNS Zone which should be used for this Front Door Custom Domain.
   - `tls` - (Required) A tls block as defined below : -
@@ -700,6 +701,7 @@ Type:
 
 ```hcl
 list(object({
+    key         = optional(string)
     host_name   = string
     name        = optional(string)
     dns_zone_id = optional(string, null)
@@ -716,6 +718,7 @@ Default: `[]`
 
 Description:   Manages a list of Front Door (standard/premium) Endpoints.
 
+  - `key` - (Optional) Legacy escape hatch. Used as the Terraform `for_each` key (resource address) instead of the `name`. Set it to the key you used with the key-based version of this module to keep the existing state without any `moved` block or state edit. Leave it unset for new deployments. Must be unique.
   - `name` - (Required) The name which should be used for this Front Door Endpoint.
   - `enabled` - (Optional) Specifies if this Front Door Endpoint is enabled? Defaults to true.
   - `tags` - (Optional) Specifies a mapping of tags which should be assigned to the Front Door Endpoint.  
@@ -737,6 +740,7 @@ Type:
 
 ```hcl
 list(object({
+    key     = optional(string)
     name    = string
     enabled = optional(bool, true)
     tags    = optional(map(any))
@@ -749,6 +753,7 @@ Default: `[]`
 
 Description:   Manages a list of Front Door (standard/premium) Firewall Policies.
 
+  - `key` - (Optional) Legacy escape hatch. Used as the Terraform `for_each` key (resource address) instead of the `name`. Set it to the key you used with the key-based version of this module to keep the existing state without any `moved` block or state edit. Leave it unset for new deployments. Must be unique.
   - `name` - (Required) The name which should be used for this Front Door Security Policy. Possible values must not be an empty string.
   - `resource_group_name` - (Required) The name of the resource group. Changing this forces a new resource to be created.
   - `sku_name` - (Required) The sku's pricing tier for this Front Door Firewall Policy. Possible values include 'Standard\_AzureFrontDoor' or 'Premium\_AzureFrontDoor'.
@@ -920,6 +925,7 @@ Type:
 
 ```hcl
 list(object({
+    key                               = optional(string)
     name                              = string
     resource_group_name               = string
     sku_name                          = string
@@ -984,9 +990,11 @@ Default: `[]`
 
 Description:   Manages a list of Front Door (standard/premium) Origin groups.
 
+  - `key` - (Optional) Legacy escape hatch. Used as the Terraform `for_each` key (resource address) instead of the group name. Set it to the key you used with the key-based version of this module to keep the existing state without any `moved` block or state edit. Leave it unset for new deployments. Must be unique.
   - `name` - (Optional) The name which should be used for this Front Door Origin Group. Always used as given when set. When omitted, it defaults to the `host_name` of the first origin with dots replaced by hyphens and the suffix `-og` (for example `app.contoso.com` becomes `app-contoso-com-og`). Set it explicitly on existing deployments, because changing the name of an Azure resource recreates it.
   - `origins` - (Required) The list of origins of this origin group. Origins are nested in their group, so the group never has to be referenced from an origin.
       - `host_name` - (Required) The IPv4 address, IPv6 address or Domain name of the Origin. Must be unique across all origin groups, so that routes can reference an origin by host name.
+      - `key` - (Optional) Legacy escape hatch. Used as the Terraform `for_each` key instead of `<group name>/<origin name>`. Set it to the key you used with the key-based version of this module to keep the existing state. Leave it unset for new deployments. Must be unique.
       - `name` - (Optional) The name which should be used for this Front Door Origin. Always used as given when set. When omitted, it defaults to the `host_name` with dots replaced by hyphens.
       - `certificate_name_check_enabled` - (Optional) Specifies whether certificate name checks are enabled for this origin. Defaults to true.
       - `enabled` - (Optional) Should the origin be enabled? Defaults to true.
@@ -1044,8 +1052,10 @@ Type:
 
 ```hcl
 list(object({
+    key  = optional(string)
     name = optional(string)
     origins = list(object({
+      key                            = optional(string)
       host_name                      = string
       name                           = optional(string)
       certificate_name_check_enabled = optional(bool, true)
@@ -1082,6 +1092,7 @@ Default: `[]`
 
 Description:   Manages a list of Front Door (standard/premium) Routes.
 
+  - `key` - (Optional) Legacy escape hatch. Used as the Terraform `for_each` key (resource address) instead of the `name`. Set it to the key you used with the key-based version of this module to keep the existing state without any `moved` block or state edit. Leave it unset for new deployments. Must be unique.
   - `name` - (Required) The name which should be used for this Front Door Route. Valid values must begin with a letter or number, end with a letter or number and may only contain letters, numbers and hyphens with a maximum length of 90 characters.
   - `origin_group_name` - (Optional) The name of the origin group to associate the route with. When omitted, it is inferred from `origin_host_names`.
   - `origin_names` - (Optional) The list of names of origins (within the origin group) to associate the route with.
@@ -1131,6 +1142,7 @@ Type:
 
 ```hcl
 list(object({
+    key                       = optional(string)
     name                      = string
     origin_group_name         = optional(string)
     origin_names              = optional(list(string), [])
@@ -1169,6 +1181,7 @@ Default: `[]`
 
 Description:   Manages a list of Front Door (standard/premium) Rules. The following properties can be specified:
 
+  - `key` - (Optional) Legacy escape hatch. Used as the Terraform `for_each` key (resource address) instead of `<rule set name>/<name>`. Set it to the key you used with the key-based version of this module to keep the existing state without any `moved` block or state edit. Leave it unset for new deployments. Must be unique.
   - `name` - (Required) The name which should be used for this Front Door Rule.
   - `order` - (Required) The order in which the rule should be applied. The order value should be sequential and begin at 1(e.g. 1, 2, 3…). A Front Door Rule with a lesser order value will be applied before a rule with a greater order value.
   - `origin_group_name` - (Optional) The name of the origin group to associate the rule with. Only used when a `route_configuration_override_actions` entry sets `set_origin_groupid` to true. Use the explicit group name, or the derived name (first origin `host_name` with dots replaced by hyphens, plus `-og`) when the group has no name.
@@ -1409,6 +1422,7 @@ Type:
 
 ```hcl
 list(object({
+    key               = optional(string)
     name              = string
     order             = number
     origin_group_name = optional(string)
@@ -1568,6 +1582,7 @@ Default: `[]`
 
 Description:   Manages a list of Front Door (standard/premium) Secrets.
 
+  - `key` - (Optional) Legacy escape hatch. Used as the Terraform `for_each` key (resource address) instead of the `name`. Set it to the key you used with the key-based version of this module to keep the existing state without any `moved` block or state edit. Leave it unset for new deployments. Must be unique.
   - `name` - (Required) The name which should be used for this Front Door Secret.
   - `key_vault_certificate_id` - (Required) The ID of the Key Vault certificate resource to use.  
   Example Input:
@@ -1585,6 +1600,7 @@ Type:
 
 ```hcl
 list(object({
+    key                      = optional(string)
     name                     = string
     key_vault_certificate_id = string
   }))
@@ -1596,6 +1612,7 @@ Default: `[]`
 
 Description:   Manages a list of Front Door (standard/premium) Security Policies.
 
+  - `key` - (Optional) Legacy escape hatch. Used as the Terraform `for_each` key (resource address) instead of the `name`. Set it to the key you used with the key-based version of this module to keep the existing state without any `moved` block or state edit. Leave it unset for new deployments. Must be unique.
   - `name` - (Required) The name which should be used for this Front Door Security Policy. Possible values must not be an empty string.
   - `firewall` - (Required) An firewall block as defined below: -
   - `front_door_firewall_policy_name` - (Required) the name of the Front Door Firewall Policy that should be linked to this Front Door Security Policy.
@@ -1625,6 +1642,7 @@ Type:
 
 ```hcl
 list(object({
+    key  = optional(string)
     name = string
     firewall = object({
       front_door_firewall_policy_name = string

@@ -10,8 +10,8 @@ resource "azurerm_cdn_frontdoor_endpoint" "endpoints" {
 resource "azurerm_cdn_frontdoor_route" "routes" {
   for_each = local.front_door_routes
 
-  cdn_frontdoor_endpoint_id       = azurerm_cdn_frontdoor_endpoint.endpoints[each.value.endpoint_name].id
-  cdn_frontdoor_origin_group_id   = azurerm_cdn_frontdoor_origin_group.origin_groups[local.front_door_route_origin_group_names[each.key]].id
+  cdn_frontdoor_endpoint_id       = azurerm_cdn_frontdoor_endpoint.endpoints[local.front_door_endpoint_keys_by_name[each.value.endpoint_name]].id
+  cdn_frontdoor_origin_group_id   = azurerm_cdn_frontdoor_origin_group.origin_groups[local.front_door_origin_group_keys_by_name[local.front_door_route_origin_group_names[each.key]]].id
   name                            = each.value.name
   patterns_to_match               = each.value.patterns_to_match
   supported_protocols             = each.value.supported_protocols

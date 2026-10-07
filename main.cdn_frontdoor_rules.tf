@@ -38,7 +38,7 @@ resource "azurerm_cdn_frontdoor_rule" "rules" {
       content {
         cache_behavior                = route_configuration_override_action.value.cache_behavior
         cache_duration                = route_configuration_override_action.value.cache_duration
-        cdn_frontdoor_origin_group_id = route_configuration_override_action.value.set_origin_groupid == true ? azurerm_cdn_frontdoor_origin_group.origin_groups[each.value.origin_group_name].id : null
+        cdn_frontdoor_origin_group_id = route_configuration_override_action.value.set_origin_groupid == true ? azurerm_cdn_frontdoor_origin_group.origin_groups[local.front_door_origin_group_keys_by_name[each.value.origin_group_name]].id : null
         compression_enabled           = route_configuration_override_action.value.compression_enabled
         forwarding_protocol           = route_configuration_override_action.value.forwarding_protocol
         query_string_caching_behavior = route_configuration_override_action.value.query_string_caching_behavior

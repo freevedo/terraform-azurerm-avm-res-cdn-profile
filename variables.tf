@@ -723,6 +723,7 @@ DESCRIPTION
 
 variable "front_door_custom_domains" {
   type = list(object({
+    key         = optional(string)
     host_name   = string
     name        = optional(string)
     dns_zone_id = optional(string, null)
@@ -736,6 +737,7 @@ variable "front_door_custom_domains" {
   Manages a list of Front Door (standard/premium) Custom Domains. Custom domains are identified by their `host_name`, which must be unique.
 
   - `host_name` - (Required) The host name of the domain. The host_name field must be the FQDN of your domain. Routes and security policies reference the domain by this value.
+  - `key` - (Optional) Legacy escape hatch. Used as the Terraform `for_each` key (resource address) instead of the `host_name`. Set it to the key you used with the key-based version of this module to keep the existing state without any `moved` block or state edit. Leave it unset for new deployments. Must be unique.
   - `name` - (Optional) The name which should be used for this Front Door Custom Domain. Defaults to the `host_name` with dots replaced by hyphens.
   - `dns_zone_id` - (Optional) The ID of the Azure DNS Zone which should be used for this Front Door Custom Domain.
   - `tls` - (Required) A tls block as defined below : -
@@ -759,6 +761,11 @@ variable "front_door_custom_domains" {
   nullable    = false
 
   validation {
+    condition     = length([for v in var.front_door_custom_domains : v.key if v.key != null]) == length(distinct([for v in var.front_door_custom_domains : v.key if v.key != null]))
+    error_message = "front_door_custom_domains: key values must be unique."
+  }
+
+  validation {
     condition     = length([for v in var.front_door_custom_domains : v.host_name]) == length(distinct([for v in var.front_door_custom_domains : v.host_name]))
     error_message = "front_door_custom_domains: host_name values must be unique."
   }
@@ -771,6 +778,7 @@ variable "front_door_custom_domains" {
 
 variable "front_door_endpoints" {
   type = list(object({
+    key     = optional(string)
     name    = string
     enabled = optional(bool, true)
     tags    = optional(map(any))
@@ -779,6 +787,7 @@ variable "front_door_endpoints" {
   description = <<DESCRIPTION
   Manages a list of Front Door (standard/premium) Endpoints.
 
+  - `key` - (Optional) Legacy escape hatch. Used as the Terraform `for_each` key (resource address) instead of the `name`. Set it to the key you used with the key-based version of this module to keep the existing state without any `moved` block or state edit. Leave it unset for new deployments. Must be unique.
   - `name` - (Required) The name which should be used for this Front Door Endpoint.
   - `enabled` - (Optional) Specifies if this Front Door Endpoint is enabled? Defaults to true.
   - `tags` - (Optional) Specifies a mapping of tags which should be assigned to the Front Door Endpoint.
@@ -799,6 +808,11 @@ variable "front_door_endpoints" {
   nullable    = false
 
   validation {
+    condition     = length([for v in var.front_door_endpoints : v.key if v.key != null]) == length(distinct([for v in var.front_door_endpoints : v.key if v.key != null]))
+    error_message = "front_door_endpoints: key values must be unique."
+  }
+
+  validation {
     condition     = length([for v in var.front_door_endpoints : v.name]) == length(distinct([for v in var.front_door_endpoints : v.name]))
     error_message = "front_door_endpoints: endpoint names must be unique."
   }
@@ -807,6 +821,7 @@ variable "front_door_endpoints" {
 
 variable "front_door_firewall_policies" {
   type = list(object({
+    key                               = optional(string)
     name                              = string
     resource_group_name               = string
     sku_name                          = string
@@ -867,6 +882,7 @@ variable "front_door_firewall_policies" {
   description = <<DESCRIPTION
   Manages a list of Front Door (standard/premium) Firewall Policies.
 
+  - `key` - (Optional) Legacy escape hatch. Used as the Terraform `for_each` key (resource address) instead of the `name`. Set it to the key you used with the key-based version of this module to keep the existing state without any `moved` block or state edit. Leave it unset for new deployments. Must be unique.
   - `name` - (Required) The name which should be used for this Front Door Security Policy. Possible values must not be an empty string.
   - `resource_group_name` - (Required) The name of the resource group. Changing this forces a new resource to be created.
   - `sku_name` - (Required) The sku's pricing tier for this Front Door Firewall Policy. Possible values include 'Standard_AzureFrontDoor' or 'Premium_AzureFrontDoor'.
@@ -1037,6 +1053,11 @@ variable "front_door_firewall_policies" {
   nullable    = false
 
   validation {
+    condition     = length([for v in var.front_door_firewall_policies : v.key if v.key != null]) == length(distinct([for v in var.front_door_firewall_policies : v.key if v.key != null]))
+    error_message = "front_door_firewall_policies: key values must be unique."
+  }
+
+  validation {
     condition     = length([for v in var.front_door_firewall_policies : v.name]) == length(distinct([for v in var.front_door_firewall_policies : v.name]))
     error_message = "front_door_firewall_policies: firewall policy names must be unique."
   }
@@ -1101,8 +1122,10 @@ variable "front_door_firewall_policies" {
 
 variable "front_door_origin_groups" {
   type = list(object({
+    key  = optional(string)
     name = optional(string)
     origins = list(object({
+      key                            = optional(string)
       host_name                      = string
       name                           = optional(string)
       certificate_name_check_enabled = optional(bool, true)
@@ -1138,9 +1161,11 @@ variable "front_door_origin_groups" {
   description = <<DESCRIPTION
   Manages a list of Front Door (standard/premium) Origin groups.
 
+  - `key` - (Optional) Legacy escape hatch. Used as the Terraform `for_each` key (resource address) instead of the group name. Set it to the key you used with the key-based version of this module to keep the existing state without any `moved` block or state edit. Leave it unset for new deployments. Must be unique.
   - `name` - (Optional) The name which should be used for this Front Door Origin Group. Always used as given when set. When omitted, it defaults to the `host_name` of the first origin with dots replaced by hyphens and the suffix `-og` (for example `app.contoso.com` becomes `app-contoso-com-og`). Set it explicitly on existing deployments, because changing the name of an Azure resource recreates it.
   - `origins` - (Required) The list of origins of this origin group. Origins are nested in their group, so the group never has to be referenced from an origin.
       - `host_name` - (Required) The IPv4 address, IPv6 address or Domain name of the Origin. Must be unique across all origin groups, so that routes can reference an origin by host name.
+      - `key` - (Optional) Legacy escape hatch. Used as the Terraform `for_each` key instead of `<group name>/<origin name>`. Set it to the key you used with the key-based version of this module to keep the existing state. Leave it unset for new deployments. Must be unique.
       - `name` - (Optional) The name which should be used for this Front Door Origin. Always used as given when set. When omitted, it defaults to the `host_name` with dots replaced by hyphens.
       - `certificate_name_check_enabled` - (Optional) Specifies whether certificate name checks are enabled for this origin. Defaults to true.
       - `enabled` - (Optional) Should the origin be enabled? Defaults to true.
@@ -1195,6 +1220,19 @@ variable "front_door_origin_groups" {
   ```
   DESCRIPTION
   nullable    = false
+
+  validation {
+    condition     = length([for g in var.front_door_origin_groups : g.key if g.key != null]) == length(distinct([for g in var.front_door_origin_groups : g.key if g.key != null]))
+    error_message = "front_door_origin_groups: key values must be unique."
+  }
+  validation {
+    condition     = length([for o in flatten([for g in var.front_door_origin_groups : g.origins]) : o.key if o.key != null]) == length(distinct([for o in flatten([for g in var.front_door_origin_groups : g.origins]) : o.key if o.key != null]))
+    error_message = "front_door_origin_groups: origin key values must be unique."
+  }
+  validation {
+    condition     = length([for v in var.front_door_origin_groups : v.key if v.key != null]) == length(distinct([for v in var.front_door_origin_groups : v.key if v.key != null]))
+    error_message = "front_door_origin_groups: key values must be unique."
+  }
 
   validation {
     condition     = alltrue([for g in var.front_door_origin_groups : g.name != null || length(g.origins) > 0])
@@ -1324,6 +1362,7 @@ variable "front_door_origin_groups" {
 
 variable "front_door_routes" {
   type = list(object({
+    key                       = optional(string)
     name                      = string
     origin_group_name         = optional(string)
     origin_names              = optional(list(string), [])
@@ -1349,6 +1388,7 @@ variable "front_door_routes" {
   description = <<DESCRIPTION
   Manages a list of Front Door (standard/premium) Routes.
 
+  - `key` - (Optional) Legacy escape hatch. Used as the Terraform `for_each` key (resource address) instead of the `name`. Set it to the key you used with the key-based version of this module to keep the existing state without any `moved` block or state edit. Leave it unset for new deployments. Must be unique.
   - `name` - (Required) The name which should be used for this Front Door Route. Valid values must begin with a letter or number, end with a letter or number and may only contain letters, numbers and hyphens with a maximum length of 90 characters.
   - `origin_group_name` - (Optional) The name of the origin group to associate the route with. When omitted, it is inferred from `origin_host_names`.
   - `origin_names` - (Optional) The list of names of origins (within the origin group) to associate the route with.
@@ -1395,6 +1435,11 @@ variable "front_door_routes" {
   ```
   DESCRIPTION
   nullable    = false
+
+  validation {
+    condition     = length([for v in var.front_door_routes : v.key if v.key != null]) == length(distinct([for v in var.front_door_routes : v.key if v.key != null]))
+    error_message = "front_door_routes: key values must be unique."
+  }
 
   validation {
     condition     = alltrue([for v in var.front_door_routes : v.origin_group_name != null || length(v.origin_host_names) > 0])
@@ -1475,6 +1520,7 @@ variable "front_door_rule_sets" {
 
 variable "front_door_rules" {
   type = list(object({
+    key               = optional(string)
     name              = string
     order             = number
     origin_group_name = optional(string)
@@ -1630,6 +1676,7 @@ variable "front_door_rules" {
   description = <<DESCRIPTION
   Manages a list of Front Door (standard/premium) Rules. The following properties can be specified:
 
+  - `key` - (Optional) Legacy escape hatch. Used as the Terraform `for_each` key (resource address) instead of `<rule set name>/<name>`. Set it to the key you used with the key-based version of this module to keep the existing state without any `moved` block or state edit. Leave it unset for new deployments. Must be unique.
   - `name` - (Required) The name which should be used for this Front Door Rule.
   - `order` - (Required) The order in which the rule should be applied. The order value should be sequential and begin at 1(e.g. 1, 2, 3…). A Front Door Rule with a lesser order value will be applied before a rule with a greater order value.
   - `origin_group_name` - (Optional) The name of the origin group to associate the rule with. Only used when a `route_configuration_override_actions` entry sets `set_origin_groupid` to true. Use the explicit group name, or the derived name (first origin `host_name` with dots replaced by hyphens, plus `-og`) when the group has no name.
@@ -1869,6 +1916,11 @@ variable "front_door_rules" {
   nullable    = false
 
   validation {
+    condition     = length([for v in var.front_door_rules : v.key if v.key != null]) == length(distinct([for v in var.front_door_rules : v.key if v.key != null]))
+    error_message = "front_door_rules: key values must be unique."
+  }
+
+  validation {
     condition     = length([for v in var.front_door_rules : "${v.rule_set_name}/${v.name}"]) == length(distinct([for v in var.front_door_rules : "${v.rule_set_name}/${v.name}"]))
     error_message = "front_door_rules: rule names must be unique within a rule set."
   }
@@ -1981,6 +2033,7 @@ variable "front_door_rules" {
 
 variable "front_door_secrets" {
   type = list(object({
+    key                      = optional(string)
     name                     = string
     key_vault_certificate_id = string
   }))
@@ -1988,6 +2041,7 @@ variable "front_door_secrets" {
   description = <<DESCRIPTION
   Manages a list of Front Door (standard/premium) Secrets.
 
+  - `key` - (Optional) Legacy escape hatch. Used as the Terraform `for_each` key (resource address) instead of the `name`. Set it to the key you used with the key-based version of this module to keep the existing state without any `moved` block or state edit. Leave it unset for new deployments. Must be unique.
   - `name` - (Required) The name which should be used for this Front Door Secret.
   - `key_vault_certificate_id` - (Required) The ID of the Key Vault certificate resource to use.
   Example Input:
@@ -2004,6 +2058,11 @@ variable "front_door_secrets" {
   nullable    = false
 
   validation {
+    condition     = length([for v in var.front_door_secrets : v.key if v.key != null]) == length(distinct([for v in var.front_door_secrets : v.key if v.key != null]))
+    error_message = "front_door_secrets: key values must be unique."
+  }
+
+  validation {
     condition     = length([for v in var.front_door_secrets : v.name]) == length(distinct([for v in var.front_door_secrets : v.name]))
     error_message = "front_door_secrets: secret names must be unique."
   }
@@ -2016,6 +2075,7 @@ variable "front_door_secrets" {
 
 variable "front_door_security_policies" {
   type = list(object({
+    key  = optional(string)
     name = string
     firewall = object({
       front_door_firewall_policy_name = string
@@ -2030,6 +2090,7 @@ variable "front_door_security_policies" {
   description = <<DESCRIPTION
   Manages a list of Front Door (standard/premium) Security Policies.
 
+  - `key` - (Optional) Legacy escape hatch. Used as the Terraform `for_each` key (resource address) instead of the `name`. Set it to the key you used with the key-based version of this module to keep the existing state without any `moved` block or state edit. Leave it unset for new deployments. Must be unique.
   - `name` - (Required) The name which should be used for this Front Door Security Policy. Possible values must not be an empty string.
   - `firewall` - (Required) An firewall block as defined below: -
   - `front_door_firewall_policy_name` - (Required) the name of the Front Door Firewall Policy that should be linked to this Front Door Security Policy.
@@ -2056,6 +2117,11 @@ variable "front_door_security_policies" {
   ```
   DESCRIPTION
   nullable    = false
+
+  validation {
+    condition     = length([for v in var.front_door_security_policies : v.key if v.key != null]) == length(distinct([for v in var.front_door_security_policies : v.key if v.key != null]))
+    error_message = "front_door_security_policies: key values must be unique."
+  }
 
   validation {
     condition     = length([for v in var.front_door_security_policies : v.name]) == length(distinct([for v in var.front_door_security_policies : v.name]))

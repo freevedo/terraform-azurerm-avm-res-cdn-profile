@@ -103,7 +103,7 @@ resource "azurerm_cdn_frontdoor_security_policy" "security_policies" {
 
   security_policies {
     firewall {
-      cdn_frontdoor_firewall_policy_id = azurerm_cdn_frontdoor_firewall_policy.wafs[each.value.firewall.front_door_firewall_policy_name].id
+      cdn_frontdoor_firewall_policy_id = azurerm_cdn_frontdoor_firewall_policy.wafs[local.front_door_firewall_policy_keys_by_name[each.value.firewall.front_door_firewall_policy_name]].id
 
       association {
         patterns_to_match = ["/*"]
